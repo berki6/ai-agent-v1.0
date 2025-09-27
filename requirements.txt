@@ -10,3 +10,4 @@ black==25.9.0
 isort==6.0.1
 loguru==0.7.3
 google-genai==1.39.1
+rich==14.1.0
