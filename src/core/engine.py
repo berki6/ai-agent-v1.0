@@ -28,19 +28,21 @@ class CodeForgeEngine:
             ]
 
             discovered = self.module_loader.discover_modules(module_paths)
-            self.logger.info(f"Discovered {len(discovered)} module classes")
 
             # For now, create placeholder configs (will be loaded from config later)
-            for name, module_class in discovered.items():
-                config = ModuleConfig(name=name, enabled=True, priority=0)
+            for module_path, module_class in discovered.items():
+                short_name = module_path.split(".")[-1]
+                config = ModuleConfig(name=short_name, enabled=True, priority=0)
                 instance = self.module_loader.instantiate_module(module_class, config)
                 if instance:
                     success = await instance.initialize()
                     if success:
-                        self.modules[name] = instance
-                        self.logger.info(f"Initialized module: {name}")
+                        self.modules[short_name] = instance
+                        self.logger.debug(f"Initialized module: {short_name}")
                     else:
-                        self.logger.warning(f"Failed to initialize module: {name}")
+                        self.logger.warning(
+                            f"Failed to initialize module: {short_name}"
+                        )
 
             self.logger.info(
                 f"Engine initialized with {len(self.modules)} active modules"
