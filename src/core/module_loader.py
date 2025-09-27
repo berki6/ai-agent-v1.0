@@ -20,10 +20,8 @@ class ModuleLoader:
 
         for module_path in module_paths:
             try:
-                # Convert path to module format
-                module_name = module_path.replace("/", ".").replace("\\", ".")
-
-                # Import the module
+                # Try importing the module.py file directly
+                module_name = module_path + ".module"
                 module = importlib.import_module(module_name)
 
                 # Find classes that inherit from BaseModule
@@ -33,14 +31,17 @@ class ModuleLoader:
                         and issubclass(obj, BaseModule)
                         and obj != BaseModule
                     ):
-                        discovered[name] = obj
-                        self.logger.info(f"Discovered module: {name}")
+                        discovered[module_path] = obj
+                        self.logger.debug(
+                            f"Discovered module: {name} from {module_path}"
+                        )
 
             except ImportError as e:
                 self.logger.warning(f"Failed to import module from {module_path}: {e}")
             except Exception as e:
                 self.logger.error(f"Error discovering modules from {module_path}: {e}")
 
+        self.logger.info(f"Discovered {len(discovered)} module classes")
         self.loaded_modules.update(discovered)
         return discovered
 
@@ -51,7 +52,7 @@ class ModuleLoader:
         try:
             instance = module_class(config)
             self.module_instances[config.name] = instance
-            self.logger.info(f"Instantiated module: {config.name}")
+            self.logger.debug(f"Instantiated module: {config.name}")
             return instance
         except Exception as e:
             self.logger.error(
