@@ -1,0 +1,14 @@
+include README.md
+include CHANGELOG.md
+include requirements.txt
+include LICENSE
+include .env.example
+recursive-include templates *
+recursive-include docs *
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude .pytest_cache
+global-exclude .coverage
+global-exclude *.log
+global-exclude .env
+global-exclude cache/*
