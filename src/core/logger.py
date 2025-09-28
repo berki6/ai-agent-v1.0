@@ -39,13 +39,13 @@ def get_logger(name=None):
 # --- Timing Decorators ---
 import functools
 import time
-import asyncio
 
 
 def log_timing(logger=None):
     """
     Decorator to log execution time of sync and async functions.
     """
+    import asyncio
 
     def decorator(func):
         @functools.wraps(func)
