@@ -1,6 +1,6 @@
-import asyncio
 import click
 import json
+import asyncio
 from typing import Optional
 from rich.theme import Theme
 from rich.console import Console
@@ -104,6 +104,7 @@ def init(ctx):
     console.print()  # Add spacing before logging
 
     # Now perform the initialization (logging will appear here)
+
     async def _init():
         engine = CodeForgeEngine()
         success = await engine.initialize()
@@ -192,6 +193,7 @@ def list_modules(ctx):
     console.print()  # Add spacing before logging
 
     # Now perform the discovery (logging will appear here)
+
     async def _list():
         engine = CodeForgeEngine()
         success = await engine.initialize()
@@ -336,6 +338,7 @@ def run(ctx, module_name, input, json_input, interactive):
     console.print()  # Add spacing before logging
 
     # Now perform the initialization (logging will appear here)
+
     async def _init():
         engine = CodeForgeEngine()
         success = await engine.initialize()
@@ -553,6 +556,51 @@ def _collect_interactive_input(console, module_name):
         input_data = {"input": input_text}
 
     return input_data
+
+
+@cli.command()
+@click.option("--host", default="0.0.0.0", help="Host to bind the server to")
+@click.option("--port", default=8000, type=int, help="Port to bind the server to")
+@click.option("--reload", is_flag=True, help="Enable auto-reload for development")
+@click.pass_context
+def web(ctx, host, port, reload):
+    """Start the CodeForge AI web server"""
+    console = ctx.obj["console"]
+    logger = ctx.obj["logger"]
+
+    console.print("[bold green]🚀 Starting CodeForge AI Web Server[/bold green]")
+    console.print(f"[blue]Host:[/blue] {host}")
+    console.print(f"[blue]Port:[/blue] {port}")
+    console.print(
+        f"[blue]URL:[/blue] http://{host if host != '0.0.0.0' else 'localhost'}:{port}"
+    )
+    console.print()
+
+    try:
+        import uvicorn
+        from web import app
+
+        # Configure uvicorn
+        config = uvicorn.Config(
+            app=app,
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info" if ctx.obj["verbose"] else "warning",
+        )
+
+        server = uvicorn.Server(config)
+        server.run()
+
+    except ImportError:
+        console.print(
+            "[red]❌ Error: uvicorn not installed. Install with: pip install uvicorn[standard][/red]"
+        )
+        return 1
+    except Exception as e:
+        console.print(f"[red]❌ Error starting web server: {str(e)}[/red]")
+        logger.error(f"Web server error: {str(e)}")
+        return 1
 
 
 if __name__ == "__main__":
