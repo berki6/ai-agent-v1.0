@@ -51,7 +51,7 @@ class Sentinel(BaseModule):
                 "description": "Potential SQL injection vulnerability",
             },
             "xss_vulnerable": {
-                "pattern": r"innerHTML\s*[=]\s*.*\+.*",
+                "pattern": r"(?i)innerHTML\s*[=]\s*.*",
                 "severity": "high",
                 "description": "Potential XSS vulnerability with innerHTML",
             },
