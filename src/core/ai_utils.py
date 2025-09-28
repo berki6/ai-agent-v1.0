@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Optional, List, AsyncGenerator, cast
 from abc import ABC, abstractmethod
 
-from google import genai
+import google.genai as genai
 from google.genai import types
 from google.genai.errors import APIError
 
