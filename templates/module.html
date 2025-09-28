@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8f9fa;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .module-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .result-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-error {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .result-content {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .star {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #ddd;
+            transition: color 0.2s;
+        }
+
+        .star:hover,
+        .star.active {
+            color: #f39c12;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+
+        <header class="header">
+            <div class="module-icon">
+                {% if module_name == 'scaffolder' %}🏗️
+                {% elif module_name == 'sentinel' %}🛡️
+                {% elif module_name == 'alchemist' %}📚
+                {% elif module_name == 'architect' %}🏛️
+                {% else %}🤖{% endif %}
+            </div>
+            <h1>{{ module_name.title() }}</h1>
+            <p>{{ module.description }}</p>
+        </header>
+
+        <div class="form-card">
+            <form id="moduleForm">
+                <div class="form-group">
+                    <label for="input" class="form-label">Input Data</label>
+                    <textarea id="input" name="input_data" class="form-input form-textarea"
+                        placeholder="Enter your request or data here..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn" id="submitBtn">
+                    Execute {{ module_name.title() }}
+                </button>
+            </form>
+        </div>
+
+        <div id="resultContainer" style="display: none;">
+            <div class="result-card">
+                <div class="result-header">
+                    <h3>Execution Result</h3>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span id="resultStatus" class="result-status"></span>
+                        <button id="exportPdfBtn" class="btn" style="padding: 8px 16px; font-size: 0.9rem;">📄 Export
+                            PDF</button>
+                        <button id="exportJsonBtn" class="btn" style="padding: 8px 16px; font-size: 0.9rem;">📊 Export
+                            JSON</button>
+                    </div>
+                </div>
+                <div id="resultContent" class="result-content"></div>
+
+                <!-- Feedback Section -->
+                <div id="feedbackSection"
+                    style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e1e8ed;">
+                    <h4 style="margin-bottom: 15px; color: #2c3e50;">Help Improve the AI 🤖</h4>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                        <span style="font-weight: bold;">Rate this result:</span>
+                        <div id="ratingStars" style="display: flex; gap: 5px;">
+                            <span class="star" data-rating="1">⭐</span>
+                            <span class="star" data-rating="2">⭐</span>
+                            <span class="star" data-rating="3">⭐</span>
+                            <span class="star" data-rating="4">⭐</span>
+                            <span class="star" data-rating="5">⭐</span>
+                        </div>
+                    </div>
+                    <textarea id="feedbackComment" placeholder="Optional: Any comments or suggestions?"
+                        style="width: 100%; min-height: 60px; padding: 10px; border: 1px solid #e1e8ed; border-radius: 5px; margin-bottom: 10px; resize: vertical;"></textarea>
+                    <button id="submitFeedbackBtn" class="btn" style="background: #27ae60;">Submit Feedback</button>
+                    <div id="feedbackMessage" style="margin-top: 10px; display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('moduleForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultStatus = document.getElementById('resultStatus');
+        const resultContent = document.getElementById('resultContent');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const exportJsonBtn = document.getElementById('exportJsonBtn');
+        const feedbackSection = document.getElementById('feedbackSection');
+        const ratingStars = document.querySelectorAll('.star');
+        const feedbackComment = document.getElementById('feedbackComment');
+        const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
+        const feedbackMessage = document.getElementById('feedbackMessage');
+
+        // Store the last result for export and feedback
+        let lastResult = null;
+        let lastInputData = null;
+        let selectedRating = 0;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            const inputData = formData.get('input_data');
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Executing...';
+
+            try {
+                const response = await fetch(`/api/module/{{ module_name }}/execute`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                // Store for export
+                lastResult = result;
+                lastInputData = inputData;
+
+                // Show result
+                resultContainer.style.display = 'block';
+                resultStatus.className = `result-status ${result.success ? 'status-success' : 'status-error'}`;
+                resultStatus.textContent = result.success ? 'Success' : 'Error';
+
+                let content = '';
+                if (result.language && result.language !== 'unknown') {
+                    content += `🌍 Detected Language: ${result.language.toUpperCase()}\n`;
+                }
+                if (result.input_length) {
+                    content += `📏 Input Length: ${result.input_length} characters\n`;
+                }
+                if (result.cached) {
+                    content += `💾 Using Cached Result\n`;
+                }
+                if (result.offline_mode) {
+                    content += `📴 Offline Mode Active\n`;
+                }
+                content += '\n';
+
+                if (result.success) {
+                    content += typeof result.data === 'string' ? result.data : JSON.stringify(result.data, null, 2);
+                } else {
+                    content += result.error || 'Unknown error occurred';
+                }
+
+                resultContent.textContent = content;
+
+                // Show feedback section for successful results
+                if (result.success) {
+                    feedbackSection.style.display = 'block';
+                    selectedRating = 0; // Reset rating
+                    ratingStars.forEach(star => star.classList.remove('active'));
+                    feedbackComment.value = '';
+                    feedbackMessage.style.display = 'none';
+                }
+
+                // Scroll to result
+                resultContainer.scrollIntoView({ behavior: 'smooth' });
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultContainer.style.display = 'block';
+                resultStatus.className = 'result-status status-error';
+                resultStatus.textContent = 'Error';
+                resultContent.textContent = 'Failed to execute module. Please try again.';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Execute {{ module_name.title() }}';
+            }
+        });
+
+        // Export button handlers
+        exportPdfBtn.addEventListener('click', () => {
+            if (lastInputData && lastResult) {
+                const url = `/api/export/{{ module_name }}/pdf?input_data=${encodeURIComponent(lastInputData)}`;
+                window.open(url, '_blank');
+            }
+        });
+
+        exportJsonBtn.addEventListener('click', () => {
+            if (lastInputData && lastResult) {
+                const url = `/api/export/{{ module_name }}/json?input_data=${encodeURIComponent(lastInputData)}`;
+                window.open(url, '_blank');
+            }
+        });
+
+        // Star rating handlers
+        ratingStars.forEach(star => {
+            star.addEventListener('click', () => {
+                const rating = parseInt(star.dataset.rating);
+                selectedRating = rating;
+
+                // Update star display
+                ratingStars.forEach((s, index) => {
+                    if (index < rating) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+            });
+        });
+
+        // Feedback submission handler
+        submitFeedbackBtn.addEventListener('click', async () => {
+            if (selectedRating === 0) {
+                feedbackMessage.textContent = 'Please select a rating first.';
+                feedbackMessage.style.color = 'red';
+                feedbackMessage.style.display = 'block';
+                return;
+            }
+
+            if (!lastInputData) {
+                feedbackMessage.textContent = 'No execution data available.';
+                feedbackMessage.style.color = 'red';
+                feedbackMessage.style.display = 'block';
+                return;
+            }
+
+            submitFeedbackBtn.disabled = true;
+            submitFeedbackBtn.textContent = 'Submitting...';
+
+            try {
+                const formData = new FormData();
+                formData.append('rating', selectedRating.toString());
+                formData.append('comment', feedbackComment.value);
+                formData.append('input_data', lastInputData);
+
+                const response = await fetch(`/api/feedback/{{ module_name }}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    feedbackMessage.textContent = result.message;
+                    feedbackMessage.style.color = 'green';
+                    feedbackMessage.style.display = 'block';
+
+                    // Hide feedback section after successful submission
+                    setTimeout(() => {
+                        feedbackSection.style.display = 'none';
+                    }, 3000);
+                } else {
+                    throw new Error('Feedback submission failed');
+                }
+
+            } catch (error) {
+                console.error('Feedback submission error:', error);
+                feedbackMessage.textContent = 'Failed to submit feedback. Please try again.';
+                feedbackMessage.style.color = 'red';
+                feedbackMessage.style.display = 'block';
+            } finally {
+                submitFeedbackBtn.disabled = false;
+                submitFeedbackBtn.textContent = 'Submit Feedback';
+            }
+        });
+    </script>
+</body>
+
+</html>
