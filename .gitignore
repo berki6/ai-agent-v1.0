@@ -4,6 +4,7 @@ CHANGELOG.MD
 CodeForge_AI_Overview.md
 docs/websocket-deprecation-warnings.md
 docs/test-documentation.md
+my_project/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
