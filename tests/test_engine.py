@@ -12,10 +12,12 @@ async def test_engine_initialization():
     success = await engine.initialize()
     assert success is True
 
-    # Should have no modules initially
+    # Should have modules loaded
     modules = engine.list_modules()
     assert isinstance(modules, list)
-    assert len(modules) == 0  # No modules implemented yet
+    assert (
+        len(modules) == 4
+    )  # Four modules implemented: scaffolder, sentinel, alchemist, architect
 
     # Cleanup
     await engine.shutdown()
