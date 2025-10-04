@@ -1,0 +1,163 @@
+{
+  "name": "ASP.NET Core MVC",
+  "description": "A full-featured web framework for building modern web applications with MVC pattern",
+  "language": "csharp",
+  "framework": "aspnet",
+  "project_type": "web",
+  "directories": [
+    "Controllers",
+    "Models",
+    "Views",
+    "Views/Shared",
+    "Views/Home",
+    "Services",
+    "Data",
+    "DTOs",
+    "Middleware",
+    "Extensions",
+    "wwwroot",
+    "wwwroot/css",
+    "wwwroot/js",
+    "wwwroot/lib",
+    "Properties"
+  ],
+  "files": {
+    "{{project_name}}.csproj": {
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk.Web\">\n\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n    <Nullable>enable</Nullable>\n    <ImplicitUsings>enable</ImplicitUsings>\n    <RootNamespace>{{project_name | replace('-', '')}}</RootNamespace>\n  </PropertyGroup>\n\n  <ItemGroup>\n    <PackageReference Include=\"Microsoft.AspNetCore.OpenApi\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Swashbuckle.AspNetCore\" Version=\"6.5.0\" />\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore.InMemory\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore.SqlServer\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Microsoft.AspNetCore.Cors\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Serilog.AspNetCore\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Serilog.Sinks.Console\" Version=\"5.0.1\" />\n    <PackageReference Include=\"FluentValidation.AspNetCore\" Version=\"11.3.0\" />\n    <PackageReference Include=\"Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation\" Version=\"8.0.0\" />\n  </ItemGroup>\n\n  <ItemGroup>\n    <PackageReference Include=\"Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Microsoft.AspNetCore.Identity.EntityFrameworkCore\" Version=\"8.0.0\" />\n    <PackageReference Include=\"Microsoft.AspNetCore.Identity.UI\" Version=\"8.0.0\" />\n  </ItemGroup>\n\n</Project>\n",
+      "description": "C# project file with ASP.NET Core MVC dependencies"
+    },
+    "Program.cs": {
+      "content": "using {{project_name | replace('-', '')}}.Data;\nusing {{project_name | replace('-', '')}}.Middleware;\nusing Microsoft.EntityFrameworkCore;\nusing Serilog;\n\nvar builder = WebApplication.CreateBuilder(args);\n\n// Configure Serilog\nLog.Logger = new LoggerConfiguration()\n    .ReadFrom.Configuration(builder.Configuration)\n    .Enrich.FromLogContext()\n    .WriteTo.Console()\n    .CreateLogger();\n\nbuilder.Host.UseSerilog();\n\n// Add services to the container.\nbuilder.Services.AddControllersWithViews();\n\n// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle\nbuilder.Services.AddEndpointsApiExplorer();\nbuilder.Services.AddSwaggerGen();\n\n// Add CORS\nbuilder.Services.AddCors(options =>\n{\n    options.AddPolicy(\"AllowAll\",\n        builder =>\n        {\n            builder.AllowAnyOrigin()\n                   .AllowAnyMethod()\n                   .AllowAnyHeader();\n        });\n});\n\n// Add DbContext\nbuilder.Services.AddDbContext<ApplicationDbContext>(options =>\n    options.UseInMemoryDatabase(\"{{project_name}}Db\"));\n\n// Add services\nbuilder.Services.AddScoped<IUserService, UserService>();\n\n// Add FluentValidation\nbuilder.Services.AddValidatorsFromAssemblyContaining<Program>();\n\n// Add Razor runtime compilation for development\nvar app = builder.Build();\n\n// Configure the HTTP request pipeline.\nif (app.Environment.IsDevelopment())\n{\n    app.UseSwagger();\n    app.UseSwaggerUI();\n    app.UseDeveloperExceptionPage();\n}\nelse\n{\n    app.UseExceptionHandler(\"/Home/Error\");\n    app.UseHsts();\n}\n\napp.UseHttpsRedirection();\napp.UseStaticFiles();\n\napp.UseRouting();\n\napp.UseCors(\"AllowAll\");\n\napp.UseAuthorization();\n\napp.MapControllerRoute(\n    name: \"default\",\n    pattern: \"{controller=Home}/{action=Index}/{id?}\");\n\napp.MapControllers();\n\napp.Run();\n",
+      "description": "Main Program.cs file with ASP.NET Core MVC setup"
+    },
+    "Controllers/HomeController.cs": {
+      "content": "using Microsoft.AspNetCore.Mvc;\n\nnamespace {{project_name | replace('-', '')}}.Controllers;\n\npublic class HomeController : Controller\n{\n    private readonly ILogger<HomeController> _logger;\n\n    public HomeController(ILogger<HomeController> logger)\n    {\n        _logger = logger;\n    }\n\n    public IActionResult Index()\n    {\n        ViewData[\"Message\"] = \"Welcome to {{project_name}}\";\n        ViewData[\"Framework\"] = \"ASP.NET Core MVC\";\n        ViewData[\"Language\"] = \"C#\";\n        return View();\n    }\n\n    public IActionResult Privacy()\n    {\n        return View();\n    }\n\n    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]\n    public IActionResult Error()\n    {\n        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });\n    }\n}\n",
+      "description": "Home controller for ASP.NET MVC"
+    },
+    "Controllers/ApiController.cs": {
+      "content": "using Microsoft.AspNetCore.Mvc;\n\nnamespace {{project_name | replace('-', '')}}.Controllers;\n\n[ApiController]\n[Route(\"api/v1/[controller]\")]\npublic class ApiController : ControllerBase\n{\n    [HttpGet(\"health\")]\n    public IActionResult Health()\n    {\n        var response = new\n        {\n            status = \"healthy\",\n            timestamp = DateTime.UtcNow,\n            service = \"{{project_name}}\",\n            framework = \"ASP.NET Core MVC\",\n            language = \"C#\"\n        };\n        return Ok(response);\n    }\n\n    [HttpGet(\"health/detailed\")]\n    public IActionResult DetailedHealth()\n    {\n        var response = new\n        {\n            status = \"healthy\",\n            timestamp = DateTime.UtcNow,\n            service = \"{{project_name}}\",\n            version = \"1.0.0\",\n            dotnetVersion = Environment.Version.ToString(),\n            os = Environment.OSVersion.ToString(),\n            uptime = TimeSpan.FromMilliseconds(Environment.TickCount64)\n        };\n        return Ok(response);\n    }\n}\n",
+      "description": "API controller for health checks"
+    },
+    "Models/BaseEntity.cs": {
+      "content": "using System.ComponentModel.DataAnnotations;\n\nnamespace {{project_name | replace('-', '')}}.Models;\n\npublic abstract class BaseEntity\n{\n    [Key]\n    public int Id { get; set; }\n\n    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;\n\n    public DateTime? UpdatedAt { get; set; }\n}\n",
+      "description": "Base entity class with common properties"
+    },
+    "Models/User.cs": {
+      "content": "using System.ComponentModel.DataAnnotations;\nusing System.ComponentModel.DataAnnotations.Schema;\n\nnamespace {{project_name | replace('-', '')}}.Models;\n\n[Table(\"Users\")]\npublic class User : BaseEntity\n{\n    [Required]\n    [StringLength(50)]\n    public string Username { get; set; } = string.Empty;\n\n    [Required]\n    [EmailAddress]\n    [StringLength(100)]\n    public string Email { get; set; } = string.Empty;\n\n    [Required]\n    [StringLength(120)]\n    public string Password { get; set; } = string.Empty;\n\n    public bool IsActive { get; set; } = true;\n\n    public ICollection<string> Roles { get; set; } = new List<string>();\n\n    public User() {}\n\n    public User(string username, string email, string password)\n    {\n        Username = username;\n        Email = email;\n        Password = password;\n    }\n}\n",
+      "description": "User model entity"
+    },
+    "Models/ErrorViewModel.cs": {
+      "content": "namespace {{project_name | replace('-', '')}}.Models;\n\npublic class ErrorViewModel\n{\n    public string? RequestId { get; set; }\n\n    public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);\n}\n",
+      "description": "Error view model for MVC"
+    },
+    "Views/_ViewStart.cshtml": {
+      "content": "@{\n    Layout = \"_Layout\";\n}\n",
+      "description": "View start file for Razor views"
+    },
+    "Views/_ViewImports.cshtml": {
+      "content": "@using {{project_name | replace('-', '')}}\n@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers\n",
+      "description": "View imports for Razor views"
+    },
+    "Views/Shared/_Layout.cshtml": {
+      "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>@ViewData[\"Title\"] - {{project_name}}</title>\n    <link rel=\"stylesheet\" href=\"~/lib/bootstrap/dist/css/bootstrap.min.css\" />\n    <link rel=\"stylesheet\" href=\"~/css/site.css\" />\n</head>\n<body>\n    <header>\n        <nav class=\"navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3\">\n            <div class=\"container-fluid\">\n                <a class=\"navbar-brand\" href=\"~\">{{project_name}}</a>\n                <button class=\"navbar-toggler\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\".navbar-collapse\" aria-controls=\"navbarSupportedContent\"\n                        aria-expanded=\"false\" aria-label=\"Toggle navigation\">\n                    <span class=\"navbar-toggler-icon\"></span>\n                </button>\n                <div class=\"navbar-collapse collapse d-sm-inline-flex justify-content-between\">\n                    <ul class=\"navbar-nav flex-grow-1\">\n                        <li class=\"nav-item\">\n                            <a class=\"nav-link text-dark\" href=\"~\">Home</a>\n                        </li>\n                        <li class=\"nav-item\">\n                            <a class=\"nav-link text-dark\" href=\"~/Home/Privacy\">Privacy</a>\n                        </li>\n                    </ul>\n                </div>\n            </div>\n        </nav>\n    </header>\n    <div class=\"container\">\n        <main role=\"main\" class=\"pb-3\">\n            @RenderBody()\n        </main>\n    </div>\n\n    <footer class=\"border-top footer text-muted\">\n        <div class=\"container\">\n            &copy; 2024 - {{project_name}} - <a href=\"~/Home/Privacy\">Privacy</a>\n        </div>\n    </footer>\n    <script src=\"~/lib/jquery/dist/jquery.min.js\"></script>\n    <script src=\"~/lib/bootstrap/dist/js/bootstrap.bundle.min.js\"></script>\n    <script src=\"~/js/site.js\" asp-append-version=\"true\"></script>\n    @await RenderSectionAsync(\"Scripts\", required: false)\n</body>\n</html>\n",
+      "description": "Main layout view for MVC application"
+    },
+    "Views/Home/Index.cshtml": {
+      "content": "@{\n    ViewData[\"Title\"] = \"Home Page\";\n}\n\n<div class=\"text-center\">\n    <h1 class=\"display-4\">Welcome to @ViewData[\"Message\"]</h1>\n    <p class=\"lead\">Built with @ViewData[\"Framework\"] in @ViewData[\"Language\"]</p>\n    <p>Learn about <a href=\"https://docs.microsoft.com/aspnet/core\">building Web apps with ASP.NET Core</a>.</p>\n</div>\n\n<div class=\"row\">\n    <div class=\"col-md-6\">\n        <h2>API Endpoints</h2>\n        <ul class=\"list-group list-group-flush\">\n            <li class=\"list-group-item\"><a href=\"/api/v1/api/health\">Health Check</a></li>\n            <li class=\"list-group-item\"><a href=\"/api/v1/api/health/detailed\">Detailed Health</a></li>\n            <li class=\"list-group-item\"><a href=\"/swagger\">API Documentation</a></li>\n        </ul>\n    </div>\n    <div class=\"col-md-6\">\n        <h2>Features</h2>\n        <ul class=\"list-unstyled\">\n            <li>✓ ASP.NET Core MVC</li>\n            <li>✓ Entity Framework Core</li>\n            <li>✓ Swagger/OpenAPI</li>\n            <li>✓ Bootstrap UI</li>\n            <li>✓ CORS Support</li>\n            <li>✓ Serilog Logging</li>\n        </ul>\n    </div>\n</div>\n",
+      "description": "Home page view"
+    },
+    "Views/Home/Privacy.cshtml": {
+      "content": "@{\n    ViewData[\"Title\"] = \"Privacy Policy\";\n}\n<h1>@ViewData[\"Title\"]</h1>\n\n<p>Use this page to detail your site's privacy policy.</p>\n",
+      "description": "Privacy policy view"
+    },
+    "Views/Shared/Error.cshtml": {
+      "content": "@model ErrorViewModel\n@{\n    ViewData[\"Title\"] = \"Error\";\n}\n\n<h1 class=\"text-danger\">Error.</h1>\n<h2 class=\"text-danger\">An error occurred while processing your request.</h2>\n\n@if (Model?.ShowRequestId ?? false)\n{\n    <p>\n        <strong>Request ID:</strong> <code>@Model?.RequestId</code>\n    </p>\n}\n\n<h3>Development Mode</h3>\n<p>\n    Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.\n</p>\n<p>\n    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>\n    It can result in displaying sensitive information from exceptions to end users.\n    For local development, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>\n    and restarting the application.\n</p>\n",
+      "description": "Error page view"
+    },
+    "wwwroot/css/site.css": {
+      "content": "/* Custom styles */\nbody {\n    padding-top: 50px;\n    padding-bottom: 20px;\n}\n\n/* Wrapping element */\n/* Set some basic padding to keep content from hitting the edges */\n.body-content {\n    padding-left: 15px;\n    padding-right: 15px;\n}\n\n/* Carousel */\n.carousel-caption p {\n    font-size: 20px;\n    line-height: 1.4;\n}\n\n/* Make .svg files in the carousel display properly in older browsers */\n.carousel-inner .item img[src$=\".svg\"] {\n    width: 100%;\n}\n\n/* QR code generator */\n#qrCode {\n    margin: 15px;\n}\n\n/* Hide/re-arrange for smaller screens */\n@media screen and (max-width: 767px) {\n    /* Hide captions */\n    .carousel-caption {\n        display: none;\n    }\n}\n",
+      "description": "Custom CSS styles"
+    },
+    "wwwroot/js/site.js": {
+      "content": "// Custom JavaScript\n\n// Bootstrap tooltips initialization\n$(function () {\n    $('[data-bs-toggle=\"tooltip\"]').tooltip();\n});\n\n// Custom functions\nwindow.showAlert = function(message, type = 'info') {\n    const alertHtml = `\n        <div class=\"alert alert-${type} alert-dismissible fade show\" role=\"alert\">\n            ${message}\n            <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\" aria-label=\"Close\"></button>\n        </div>\n    `;\n    $('#alerts').append(alertHtml);\n};\n",
+      "description": "Custom JavaScript functions"
+    },
+    "Services/IUserService.cs": {
+      "content": "using {{project_name | replace('-', '')}}.Models;\nusing {{project_name | replace('-', '')}}.DTOs;\n\nnamespace {{project_name | replace('-', '')}}.Services;\n\npublic interface IUserService\n{\n    Task<IEnumerable<UserDto>> GetAllUsersAsync();\n    Task<UserDto?> GetUserByIdAsync(int id);\n    Task<UserDto?> GetUserByUsernameAsync(string username);\n    Task<UserDto> CreateUserAsync(CreateUserDto createUserDto);\n    Task<bool> UpdateUserAsync(int id, CreateUserDto updateUserDto);\n    Task<bool> DeleteUserAsync(int id);\n    Task<bool> UserExistsAsync(string username);\n}\n",
+      "description": "User service interface"
+    },
+    "Services/UserService.cs": {
+      "content": "using {{project_name | replace('-', '')}}.Data;\nusing {{project_name | replace('-', '')}}.Models;\nusing {{project_name | replace('-', '')}}.DTOs;\nusing Microsoft.EntityFrameworkCore;\n\nnamespace {{project_name | replace('-', '')}}.Services;\n\npublic class UserService : IUserService\n{\n    private readonly ApplicationDbContext _context;\n\n    public UserService(ApplicationDbContext context)\n    {\n        _context = context;\n    }\n\n    public async Task<IEnumerable<UserDto>> GetAllUsersAsync()\n    {\n        var users = await _context.Users.ToListAsync();\n        return users.Select(MapToDto);\n    }\n\n    public async Task<UserDto?> GetUserByIdAsync(int id)\n    {\n        var user = await _context.Users.FindAsync(id);\n        return user != null ? MapToDto(user) : null;\n    }\n\n    public async Task<UserDto?> GetUserByUsernameAsync(string username)\n    {\n        var user = await _context.Users\n            .FirstOrDefaultAsync(u => u.Username == username);\n        return user != null ? MapToDto(user) : null;\n    }\n\n    public async Task<UserDto> CreateUserAsync(CreateUserDto createUserDto)\n    {\n        var user = new User(\n            createUserDto.Username,\n            createUserDto.Email,\n            BCrypt.Net.BCrypt.HashPassword(createUserDto.Password)\n        )\n        {\n            Roles = createUserDto.Roles.ToList()\n        };\n\n        _context.Users.Add(user);\n        await _context.SaveChangesAsync();\n\n        return MapToDto(user);\n    }\n\n    public async Task<bool> UpdateUserAsync(int id, CreateUserDto updateUserDto)\n    {\n        var user = await _context.Users.FindAsync(id);\n        if (user == null) return false;\n\n        user.Username = updateUserDto.Username;\n        user.Email = updateUserDto.Email;\n        user.Password = BCrypt.Net.BCrypt.HashPassword(updateUserDto.Password);\n        user.Roles = updateUserDto.Roles.ToList();\n        user.UpdatedAt = DateTime.UtcNow;\n\n        await _context.SaveChangesAsync();\n        return true;\n    }\n\n    public async Task<bool> DeleteUserAsync(int id)\n    {\n        var user = await _context.Users.FindAsync(id);\n        if (user == null) return false;\n\n        _context.Users.Remove(user);\n        await _context.SaveChangesAsync();\n        return true;\n    }\n\n    public async Task<bool> UserExistsAsync(string username)\n    {\n        return await _context.Users.AnyAsync(u => u.Username == username);\n    }\n\n    private static UserDto MapToDto(User user)\n    {\n        return new UserDto\n        {\n            Id = user.Id,\n            Username = user.Username,\n            Email = user.Email,\n            IsActive = user.IsActive,\n            Roles = user.Roles,\n            CreatedAt = user.CreatedAt,\n            UpdatedAt = user.UpdatedAt\n        };\n    }\n}\n",
+      "description": "User service implementation"
+    },
+    "Data/ApplicationDbContext.cs": {
+      "content": "using {{project_name | replace('-', '')}}.Models;\nusing Microsoft.EntityFrameworkCore;\n\nnamespace {{project_name | replace('-', '')}}.Data;\n\npublic class ApplicationDbContext : DbContext\n{\n    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)\n        : base(options)\n    {\n    }\n\n    public DbSet<User> Users { get; set; }\n\n    protected override void OnModelCreating(ModelBuilder modelBuilder)\n    {\n        base.OnModelCreating(modelBuilder);\n\n        // Configure User entity\n        modelBuilder.Entity<User>(entity =>\n        {\n            entity.HasIndex(u => u.Username).IsUnique();\n            entity.HasIndex(u => u.Email).IsUnique();\n        });\n    }\n}\n",
+      "description": "Entity Framework DbContext"
+    },
+    "DTOs/UserDto.cs": {
+      "content": "using System.ComponentModel.DataAnnotations;\n\nnamespace {{project_name | replace('-', '')}}.DTOs;\n\npublic class UserDto\n{\n    public int Id { get; set; }\n\n    [Required]\n    [StringLength(50)]\n    public string Username { get; set; } = string.Empty;\n\n    [Required]\n    [EmailAddress]\n    [StringLength(100)]\n    public string Email { get; set; } = string.Empty;\n\n    public bool IsActive { get; set; }\n\n    public IEnumerable<string> Roles { get; set; } = new List<string>();\n\n    public DateTime CreatedAt { get; set; }\n\n    public DateTime? UpdatedAt { get; set; }\n}\n",
+      "description": "User data transfer object"
+    },
+    "DTOs/CreateUserDto.cs": {
+      "content": "using System.ComponentModel.DataAnnotations;\n\nnamespace {{project_name | replace('-', '')}}.DTOs;\n\npublic class CreateUserDto\n{\n    [Required]\n    [StringLength(50)]\n    public string Username { get; set; } = string.Empty;\n\n    [Required]\n    [EmailAddress]\n    [StringLength(100)]\n    public string Email { get; set; } = string.Empty;\n\n    [Required]\n    [StringLength(120, MinimumLength = 6)]\n    public string Password { get; set; } = string.Empty;\n\n    public IEnumerable<string> Roles { get; set; } = new List<string>();\n}\n",
+      "description": "Create user data transfer object"
+    },
+    "Middleware/ExceptionMiddleware.cs": {
+      "content": "using System.Net;\nusing System.Text.Json;\n\nnamespace {{project_name | replace('-', '')}}.Middleware;\n\npublic class ExceptionMiddleware\n{\n    private readonly RequestDelegate _next;\n    private readonly ILogger<ExceptionMiddleware> _logger;\n\n    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)\n    {\n        _next = next;\n        _logger = logger;\n    }\n\n    public async Task InvokeAsync(HttpContext context)\n    {\n        try\n        {\n            await _next(context);\n        }\n        catch (Exception ex)\n        {\n            _logger.LogError(ex, \"An unhandled exception occurred\");\n            await HandleExceptionAsync(context, ex);\n        }\n    }\n\n    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)\n    {\n        context.Response.ContentType = \"application/json\";\n        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;\n\n        var response = new\n        {\n            success = false,\n            message = \"An unexpected error occurred\",\n            error = exception.Message,\n            timestamp = DateTime.UtcNow\n        };\n\n        await context.Response.WriteAsync(JsonSerializer.Serialize(response));\n    }\n}\n\npublic static class ExceptionMiddlewareExtensions\n{\n    public static IApplicationBuilder UseExceptionMiddleware(this IApplicationBuilder builder)\n    {\n        return builder.UseMiddleware<ExceptionMiddleware>();\n    }\n}\n",
+      "description": "Global exception handling middleware"
+    },
+    "Extensions/ServiceCollectionExtensions.cs": {
+      "content": "using {{project_name | replace('-', '')}}.Data;\nusing {{project_name | replace('-', '')}}.Services;\n\nnamespace {{project_name | replace('-', '')}}.Extensions;\n\npublic static class ServiceCollectionExtensions\n{\n    public static IServiceCollection AddApplicationServices(this IServiceCollection services)\n    {\n        services.AddScoped<IUserService, UserService>();\n        return services;\n    }\n\n    public static IServiceCollection AddApplicationDbContext(this IServiceCollection services, string connectionString)\n    {\n        services.AddDbContext<ApplicationDbContext>(options =>\n            options.UseSqlServer(connectionString));\n        return services;\n    }\n}\n",
+      "description": "Service collection extension methods"
+    },
+    "appsettings.json": {
+      "content": "{\n  \"Logging\": {\n    \"LogLevel\": {\n      \"Default\": \"Information\",\n      \"Microsoft.AspNetCore\": \"Warning\"\n    }\n  },\n  \"AllowedHosts\": \"*\",\n  \"ConnectionStrings\": {\n    \"DefaultConnection\": \"Server=(localdb)\\\\mssqllocaldb;Database={{project_name}};Trusted_Connection=True;MultipleActiveResultSets=true\"\n  },\n  \"Serilog\": {\n    \"MinimumLevel\": {\n      \"Default\": \"Information\",\n      \"Override\": {\n        \"Microsoft\": \"Warning\",\n        \"System\": \"Warning\"\n      }\n    }\n  }\n}\n",
+      "description": "Application configuration settings"
+    },
+    "appsettings.Development.json": {
+      "content": "{\n  \"Logging\": {\n    \"LogLevel\": {\n      \"Default\": \"Information\",\n      \"Microsoft.AspNetCore\": \"Warning\",\n      \"{{project_name | replace('-', '')}}\": \"Debug\"\n    }\n  }\n}\n",
+      "description": "Development-specific configuration"
+    },
+    "Properties/launchSettings.json": {
+      "content": "{\n  \"$schema\": \"https://json.schemastore.org/launchsettings.json\",\n  \"iisSettings\": {\n    \"windowsAuthentication\": false,\n    \"anonymousAuthentication\": true,\n    \"iisExpress\": {\n      \"applicationUrl\": \"http://localhost:5000\",\n      \"sslPort\": 0\n    }\n  },\n  \"profiles\": {\n    \"{{project_name}}\": {\n      \"commandName\": \"Project\",\n      \"dotnetRunMessages\": true,\n      \"launchBrowser\": true,\n      \"launchUrl\": \"\",\n      \"applicationUrl\": \"http://localhost:5000\",\n      \"environmentVariables\": {\n        \"ASPNETCORE_ENVIRONMENT\": \"Development\"\n      }\n    },\n    \"IIS Express\": {\n      \"commandName\": \"IISExpress\",\n      \"launchBrowser\": true,\n      \"launchUrl\": \"\",\n      \"environmentVariables\": {\n        \"ASPNETCORE_ENVIRONMENT\": \"Development\"\n      }\n    }\n  }\n}\n",
+      "description": "Launch settings for development"
+    },
+    "README.md": {
+      "content": "# {{project_name}}\n\nA web application built with ASP.NET Core MVC in C#.\n\n## Features\n\n- ASP.NET Core MVC with .NET 8.0\n- Razor views with Bootstrap UI\n- Entity Framework Core\n- Swagger/OpenAPI documentation\n- CORS support\n- Serilog logging\n- FluentValidation\n- In-memory database for development\n- SQL Server support for production\n\n## Getting Started\n\n### Prerequisites\n\n- .NET 8.0 SDK\n\n### Installation\n\n1. Clone the repository\n2. Restore dependencies:\n   ```bash\n   dotnet restore\n   ```\n3. Run the application:\n   ```bash\n   dotnet run\n   ```\n\n### API Endpoints\n\n- `GET /` - Home page\n- `GET /api/v1/api/health` - Health check\n- `GET /api/v1/api/health/detailed` - Detailed health check\n- `GET /swagger` - API documentation\n\n## Project Structure\n\n```\n.\n├── Controllers/          # MVC and API controllers\n├── Models/               # Entity models\n├── Views/                # Razor views\n│   ├── Home/            # Home controller views\n│   └── Shared/          # Shared layout views\n├── DTOs/                 # Data transfer objects\n├── Services/             # Business logic services\n├── Data/                 # Database context\n├── Middleware/           # Custom middleware\n├── Extensions/           # Service extensions\n├── wwwroot/              # Static files (CSS, JS, images)\n├── Properties/           # Launch settings\n├── appsettings.json      # Configuration\n└── {{project_name}}.csproj  # Project file\n```\n\n## Development\n\n### Running Tests\n\n```bash\ndotnet test\n```\n\n### Building for Production\n\n```bash\ndotnet publish -c Release\n```\n\n### Database Migration\n\nFor production with SQL Server:\n\n```bash\ndotnet ef migrations add InitialCreate\n```\n\n## Configuration\n\nUpdate `appsettings.json` with your database connection string for production.\n\n## License\n\nThis project is licensed under the MIT License.\n",
+      "description": "Project README with setup and usage instructions"
+    },
+    "Makefile": {
+      "content": "# Makefile for {{project_name}}\n\n.PHONY: build run test clean restore publish\n\n# Restore dependencies\nrestore:\n\tdotnet restore\n\n# Build the application\nbuild:\n\tdotnet build\n\n# Run the application\nrun:\n\tdotnet run\n\n# Run tests\ntest:\n\tdotnet test\n\n# Clean build artifacts\nclean:\n\tdotnet clean\n\n# Publish for production\npublish:\n\tdotnet publish -c Release -o ./publish\n\n# Run with hot reload\nwatch:\n\tdotnet watch run\n\n# Format code\nformat:\n\tdotnet format\n",
+      "description": "Makefile with common development tasks"
+    }
+  },
+  "dependencies": {
+    "package_manager": "nuget",
+    "dependencies": [
+      "Microsoft.AspNetCore.OpenApi",
+      "Swashbuckle.AspNetCore",
+      "Microsoft.EntityFrameworkCore",
+      "Microsoft.EntityFrameworkCore.InMemory",
+      "Microsoft.EntityFrameworkCore.SqlServer",
+      "Microsoft.AspNetCore.Cors",
+      "Serilog.AspNetCore",
+      "Serilog.Sinks.Console",
+      "FluentValidation.AspNetCore",
+      "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation"
+    ],
+    "dev_dependencies": [
+      "Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore",
+      "Microsoft.AspNetCore.Identity.EntityFrameworkCore",
+      "Microsoft.AspNetCore.Identity.UI"
+    ]
+  },
+  "scripts": {
+    "start": "dotnet run",
+    "build": "dotnet build",
+    "test": "dotnet test",
+    "restore": "dotnet restore",
+    "publish": "dotnet publish -c Release",
+    "clean": "dotnet clean",
+    "watch": "dotnet watch run"
+  }
+}
