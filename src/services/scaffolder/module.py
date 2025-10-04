@@ -13,6 +13,7 @@ from .ci_cd_manager import CICDPipelineManager
 from .containerization_manager import ContainerizationManager
 from .environment_manager import EnvironmentManager
 from .security_manager import SecurityManager, AuthType, SecurityFeature
+from .testing_manager import TestingManager, TestFramework, TestType
 
 
 class ProjectScaffolderConfig(ModuleConfig):
@@ -56,6 +57,11 @@ class ProjectScaffolderConfig(ModuleConfig):
         "security_headers",
         "cors",
     ]  # Security features to enable
+    testing_enabled: bool = True  # Whether to generate testing setup
+    test_framework: str = "pytest"  # Testing framework (pytest, unittest, jest, etc.)
+    test_types: List[str] = ["unit", "integration"]  # Types of tests to generate
+    include_coverage: bool = True  # Whether to include test coverage
+    ci_testing_integration: bool = True  # Whether to include CI testing integration
 
 
 class Scaffolder(BaseModule):
@@ -70,6 +76,7 @@ class Scaffolder(BaseModule):
         self.containerization_manager = ContainerizationManager()
         self.environment_manager = EnvironmentManager()
         self.security_manager = SecurityManager()
+        self.testing_manager = TestingManager()
         self.description_text = "Generates complete project structures with AI-enhanced templates, intelligent dependency management, CI/CD pipelines, and containerization configs"
         self.version = "1.0.0"
 
@@ -104,6 +111,10 @@ class Scaffolder(BaseModule):
             # Generate security features if requested
             if config.security_enabled:
                 await self._generate_security_config(config, project_structure)
+
+            # Generate testing setup if requested
+            if config.testing_enabled:
+                await self._generate_testing_setup(config, project_structure)
 
             # Initialize git if requested
             if config.initialize_git:
@@ -715,3 +726,42 @@ class Scaffolder(BaseModule):
             project_structure["security"] = {}
 
         project_structure["security"].update(security_files)
+
+    async def _generate_testing_setup(
+        self, config: ProjectScaffolderConfig, project_structure: Dict[str, Any]
+    ):
+        """Generate testing setup and configuration"""
+
+        project_path = Path(config.output_directory) / config.project_name
+
+        # Convert string test_framework to TestFramework enum
+        try:
+            test_framework = TestFramework(config.test_framework.lower())
+        except ValueError:
+            test_framework = TestFramework.PYTEST  # Default fallback
+
+        # Convert string test_types to TestType enum
+        test_types = []
+        for test_type in config.test_types:
+            try:
+                test_types.append(TestType(test_type.lower()))
+            except ValueError:
+                continue  # Skip invalid test types
+
+        # Generate testing setup
+        testing_files = await self.testing_manager.generate_testing_setup(
+            project_path=project_path,
+            language=config.language,
+            framework=config.framework,
+            features=config.features,
+            test_framework=test_framework,
+            test_types=test_types,
+            include_coverage=config.include_coverage,
+            ci_integration=config.ci_testing_integration,
+        )
+
+        # Add to project structure for tracking
+        if "testing" not in project_structure:
+            project_structure["testing"] = {}
+
+        project_structure["testing"].update(testing_files)
