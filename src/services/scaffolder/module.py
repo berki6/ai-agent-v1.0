@@ -7,6 +7,8 @@ import shutil
 
 from src.core.base_module import BaseModule, ModuleConfig, ModuleResult
 from src.core.ai_utils import AIUtils
+from .template_manager import TemplateManager
+from .dependency_manager import DependencyManager
 
 
 class ProjectScaffolderConfig(ModuleConfig):
@@ -22,6 +24,11 @@ class ProjectScaffolderConfig(ModuleConfig):
     initialize_git: bool = True
     create_readme: bool = True
     create_dockerfile: bool = False
+    use_template: bool = True  # Whether to use predefined templates
+    check_vulnerabilities: bool = (
+        True  # Whether to check for dependency vulnerabilities
+    )
+    resolve_conflicts: bool = True  # Whether to resolve dependency conflicts
 
 
 class Scaffolder(BaseModule):
@@ -30,9 +37,9 @@ class Scaffolder(BaseModule):
     def __init__(self, config: ModuleConfig):
         super().__init__(config)
         self.ai_utils = AIUtils()
-        self.description_text = (
-            "Generates complete project structures using AI analysis"
-        )
+        self.template_manager = TemplateManager()
+        self.dependency_manager = DependencyManager()
+        self.description_text = "Generates complete project structures using AI-enhanced templates with intelligent dependency management"
         self.version = "1.0.0"
 
     def get_description(self) -> str:
@@ -97,7 +104,172 @@ class Scaffolder(BaseModule):
     async def _generate_project_structure(
         self, config: ProjectScaffolderConfig
     ) -> Dict[str, Any]:
-        """Use AI to generate the project structure based on requirements"""
+        """Generate project structure using hybrid template + AI customization approach"""
+
+        # Check if templates should be used
+        if not config.use_template:
+            return await self._generate_with_ai_fallback(config)
+
+        # Try to find a suitable template first
+        template = self.template_manager.get_template(
+            language=config.language,
+            framework=config.framework,
+            project_type=config.project_type,
+        )
+
+        if template:
+            # Use hybrid approach: template + AI customization
+            return await self._customize_template_with_ai(template, config)
+        else:
+            # Fallback to pure AI generation
+            return await self._generate_with_ai_fallback(config)
+
+    async def _customize_template_with_ai(
+        self, template: Dict[str, Any], config: ProjectScaffolderConfig
+    ) -> Dict[str, Any]:
+        """Customize a template using AI and advanced dependency management"""
+
+        # Start with the template as base
+        customized_structure = self.template_manager.customize_template(
+            template, config.__dict__
+        )
+
+        # Use advanced dependency management
+        resolved_deps = await self.dependency_manager.resolve_dependencies(
+            language=config.language,
+            framework=config.framework,
+            features=config.features,
+            existing_deps=customized_structure.get("dependencies", {}).get(
+                "dependencies", []
+            ),
+        )
+
+        # Update dependencies in the structure
+        if "dependencies" not in customized_structure:
+            customized_structure["dependencies"] = {}
+
+        customized_structure["dependencies"]["dependencies"] = resolved_deps[
+            "dependencies"
+        ]
+        customized_structure["dependencies"]["dev_dependencies"] = resolved_deps.get(
+            "dev_dependencies", []
+        )
+
+        # Add dependency conflict and vulnerability information
+        if resolved_deps.get("conflicts"):
+            customized_structure["dependencies"]["conflicts"] = resolved_deps[
+                "conflicts"
+            ]
+
+        if resolved_deps.get("vulnerabilities"):
+            customized_structure["dependencies"]["vulnerabilities"] = resolved_deps[
+                "vulnerabilities"
+            ]
+
+        # Use AI to enhance/customize based on specific requirements
+        prompt = f"""
+        You have a {config.language} {config.project_type} project template that needs customization.
+
+        Project Details:
+        - Name: {config.project_name}
+        - Type: {config.project_type}
+        - Language: {config.language}
+        - Framework: {config.framework or 'None specified'}
+        - Features: {', '.join(config.features) if config.features else 'Basic setup'}
+
+        Current Template Structure:
+        {json.dumps(customized_structure, indent=2)}
+
+        Please enhance this template by:
+        1. Adding any missing files or directories based on the requested features
+        2. Modifying existing files to include feature-specific code
+        3. Ensuring dependencies are properly configured (they have already been resolved)
+        4. Adding any necessary scripts or build configurations
+        5. Considering any dependency conflicts or vulnerabilities that were detected
+
+        Dependency Information:
+        - Resolved Dependencies: {resolved_deps['dependencies']}
+        - Dev Dependencies: {resolved_deps.get('dev_dependencies', [])}
+        - Conflicts: {resolved_deps.get('conflicts', [])}
+        - Vulnerabilities: {resolved_deps.get('vulnerabilities', [])}
+
+        Return the enhanced structure in the same JSON format. Focus on additions and modifications rather than replacing the entire template.
+        """
+
+        try:
+            ai_response = await self.ai_utils.generate_text(prompt, max_tokens=3000)
+
+            # Try to parse AI enhancements
+            try:
+                enhancements = json.loads(ai_response)
+
+                # Merge enhancements with base template
+                return self._merge_template_enhancements(
+                    customized_structure, enhancements
+                )
+
+            except json.JSONDecodeError:
+                # If AI doesn't return valid JSON, return the base template
+                return customized_structure
+
+        except Exception:
+            # If AI fails, return the base template
+            return customized_structure
+
+    def _merge_template_enhancements(
+        self, base_template: Dict[str, Any], enhancements: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Merge AI enhancements with the base template"""
+
+        merged = json.loads(json.dumps(base_template))  # Deep copy
+
+        # Merge directories
+        if "directories" in enhancements:
+            existing_dirs = set(merged.get("directories", []))
+            new_dirs = set(enhancements["directories"])
+            merged["directories"] = list(existing_dirs.union(new_dirs))
+
+        # Merge/modify files
+        if "files" in enhancements:
+            for file_path, file_info in enhancements["files"].items():
+                if file_path in merged.get("files", {}):
+                    # Merge file content if it exists
+                    existing_content = merged["files"][file_path].get("content", "")
+                    new_content = file_info.get("content", "")
+                    # Simple merge - could be enhanced with more sophisticated logic
+                    merged["files"][file_path]["content"] = (
+                        new_content or existing_content
+                    )
+                    merged["files"][file_path]["description"] = file_info.get(
+                        "description", merged["files"][file_path].get("description", "")
+                    )
+                else:
+                    # Add new file
+                    merged["files"][file_path] = file_info
+
+        # Merge dependencies
+        if "dependencies" in enhancements:
+            base_deps = merged.get("dependencies", {})
+            enh_deps = enhancements["dependencies"]
+
+            for dep_type in ["dependencies", "dev_dependencies"]:
+                if dep_type in enh_deps:
+                    existing = set(base_deps.get(dep_type, []))
+                    new_deps = set(enh_deps[dep_type])
+                    base_deps[dep_type] = list(existing.union(new_deps))
+
+        # Merge scripts
+        if "scripts" in enhancements:
+            base_scripts = merged.get("scripts", {})
+            base_scripts.update(enhancements["scripts"])
+            merged["scripts"] = base_scripts
+
+        return merged
+
+    async def _generate_with_ai_fallback(
+        self, config: ProjectScaffolderConfig
+    ) -> Dict[str, Any]:
+        """Fallback to pure AI generation when no template is available"""
 
         prompt = f"""
         Generate a complete project structure for a {config.project_type} project.
