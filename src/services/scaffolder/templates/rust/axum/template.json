@@ -1,0 +1,97 @@
+{
+  "name": "Axum Web Framework",
+  "description": "A modular web framework built with Tokio, Tower, and Hyper",
+  "language": "rust",
+  "framework": "axum",
+  "project_type": "web",
+  "directories": [
+    "src",
+    "src/handlers",
+    "src/models",
+    "src/middleware",
+    "src/routes",
+    "src/utils",
+    "tests",
+    "migrations",
+    "config",
+    "scripts"
+  ],
+  "files": {
+    "Cargo.toml": {
+      "content": "[package]\nname = \"{{project_name}}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\nauthors = [\"Your Name <your.email@example.com>\"]\ndescription = \"A web application built with Axum\"\n\n[dependencies]\naxum = \"0.7\"\ntokio = { version = \"1.0\", features = [\"full\"] }\ntower = \"0.4\"\ntower-http = { version = \"0.5\", features = [\"cors\", \"fs\"] }\nserde = { version = \"1.0\", features = [\"derive\"] }\nserde_json = \"1.0\"\ntracing = \"0.1\"\ntracing-subscriber = { version = \"0.3\", features = [\"env-filter\"] }\ndotenvy = \"0.15\"\nchrono = { version = \"0.4\", features = [\"serde\"] }\n\n[dev-dependencies]\ntower = { version = \"0.4\", features = [\"util\"] }\n",
+      "description": "Cargo.toml with Axum and related dependencies"
+    },
+    "src/main.rs": {
+      "content": "use std::net::SocketAddr;\n\nuse axum::{\n    routing::get,\n    Router,\n};\n\nuse {{project_name}}::routes::create_router;\n\n#[tokio::main]\nasync fn main() {\n    // Initialize tracing\n    tracing_subscriber::fmt()\n        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())\n        .init();\n\n    // Load environment variables\n    dotenvy::dotenv().ok();\n\n    // Build the application\n    let app = create_router();\n\n    // Run the server\n    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));\n    tracing::info!(\"listening on {}\", addr);\n\n    axum::Server::bind(&addr)\n        .serve(app.into_make_service())\n        .await\n        .unwrap();\n}\n",
+      "description": "Main Rust application entry point with Axum setup"
+    },
+    "src/lib.rs": {
+      "content": "pub mod handlers;\npub mod models;\npub mod middleware;\npub mod routes;\npub mod utils;\n\npub use routes::create_router;\n",
+      "description": "Library crate root with module declarations"
+    },
+    "src/routes.rs": {
+      "content": "use axum::{\n    routing::get,\n    Router,\n};\n\nuse crate::handlers::{health, welcome};\n\npub fn create_router() -> Router {\n    Router::new()\n        .route(\"/health\", get(health::health_check))\n        .route(\"/api/v1/\", get(welcome::welcome))\n        .route(\"/api/v1/health\", get(health::detailed_health_check))\n        .layer(tower_http::cors::CorsLayer::permissive())\n        .layer(tower_http::services::ServeDir::new(\"static\"))\n}\n",
+      "description": "Route definitions for Axum application"
+    },
+    "src/handlers/mod.rs": {
+      "content": "pub mod health;\npub mod welcome;\n",
+      "description": "Handlers module declaration"
+    },
+    "src/handlers/health.rs": {
+      "content": "use axum::Json;\nuse serde_json::{json, Value};\nuse std::time::{SystemTime, UNIX_EPOCH};\n\n#[derive(serde::Serialize)]\npub struct HealthResponse {\n    pub status: String,\n    pub timestamp: u64,\n}\n\n#[derive(serde::Serialize)]\npub struct DetailedHealthResponse {\n    pub status: String,\n    pub timestamp: u64,\n    pub version: String,\n    pub rust_version: String,\n    pub uptime: u64,\n}\n\npub async fn health_check() -> Json<Value> {\n    let timestamp = SystemTime::now()\n        .duration_since(UNIX_EPOCH)\n        .unwrap()\n        .as_secs();\n\n    Json(json!({\n        \"status\": \"healthy\",\n        \"timestamp\": timestamp\n    }))\n}\n\npub async fn detailed_health_check() -> Json<DetailedHealthResponse> {\n    let timestamp = SystemTime::now()\n        .duration_since(UNIX_EPOCH)\n        .unwrap()\n        .as_secs();\n\n    Json(DetailedHealthResponse {\n        status: \"healthy\".to_string(),\n        timestamp,\n        version: env!(\"CARGO_PKG_VERSION\").to_string(),\n        rust_version: \"1.70.0\".to_string(), // Would be dynamic in real app\n        uptime: 0, // Would be calculated from start time\n    })\n}\n",
+      "description": "Health check handlers for Axum"
+    },
+    "src/handlers/welcome.rs": {
+      "content": "use axum::Json;\nuse serde_json::{json, Value};\n\npub async fn welcome() -> Json<Value> {\n    Json(json!({\n        \"message\": \"Welcome to {{project_name}} API\",\n        \"framework\": \"Axum\",\n        \"language\": \"Rust\"\n    }))\n}\n",
+      "description": "Welcome handler for Axum"
+    },
+    "src/models.rs": {
+      "content": "use chrono::{DateTime, Utc};\nuse serde::{Deserialize, Serialize};\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct BaseModel {\n    pub id: Option<i32>,\n    #[serde(rename = \"created_at\")]\n    pub created_at: Option<DateTime<Utc>>,\n    #[serde(rename = \"updated_at\")]\n    pub updated_at: Option<DateTime<Utc>>,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct User {\n    #[serde(flatten)]\n    pub base: BaseModel,\n    pub name: String,\n    pub email: String,\n    #[serde(skip_serializing)]\n    pub password: String,\n    pub active: bool,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct APIResponse<T> {\n    pub success: bool,\n    pub message: Option<String>,\n    pub data: Option<T>,\n    pub errors: Option<Vec<String>>,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct ErrorResponse {\n    pub success: bool,\n    pub message: String,\n    pub errors: Option<Vec<String>>,\n    pub code: u16,\n}\n",
+      "description": "Data models for the Axum application"
+    },
+    "src/middleware.rs": {
+      "content": "use axum::{\n    http::{Request, Response},\n    middleware::Next,\n};\nuse std::time::Instant;\nuse tower_http::request_id::{MakeRequestId, RequestId};\n\n#[derive(Clone, Default)]\npub struct MakeRequestUuid;\n\nimpl MakeRequestId for MakeRequestUuid {\n    fn make_request_id<B>(&mut self, _request: &Request<B>) -> Option<RequestId> {\n        let request_id = uuid::Uuid::new_v4().to_string();\n        Some(RequestId::new(request_id.parse().unwrap()))\n    }\n}\n\npub async fn request_timer<B>(request: Request<B>, next: Next<B>) -> Response<B> {\n    let start = Instant::now();\n    let method = request.method().clone();\n    let uri = request.uri().clone();\n\n    let response = next.run(request).await;\n\n    let duration = start.elapsed();\n    let status = response.status();\n\n    tracing::info!(\n        method = %method,\n        uri = %uri,\n        status = %status,\n        duration_ms = %duration.as_millis(),\n        \"Request completed\"\n    );\n\n    response\n}\n\npub async fn api_version<B>(mut request: Request<B>, next: Next<B>) -> Response<B> {\n    let mut response = next.run(request).await;\n    response.headers_mut().insert(\n        \"x-api-version\",\n        \"1.0.0\".parse().unwrap(),\n    );\n    response\n}\n",
+      "description": "Middleware for Axum application"
+    },
+    "src/utils.rs": {
+      "content": "use std::env;\n\n#[derive(Debug, Clone)]\npub struct Config {\n    pub server: ServerConfig,\n    pub database: DatabaseConfig,\n}\n\n#[derive(Debug, Clone)]\npub struct ServerConfig {\n    pub host: String,\n    pub port: u16,\n}\n\n#[derive(Debug, Clone)]\npub struct DatabaseConfig {\n    pub host: String,\n    pub port: u16,\n    pub user: String,\n    pub password: String,\n    pub database: String,\n}\n\nimpl Config {\n    pub fn from_env() -> Self {\n        Self {\n            server: ServerConfig {\n                host: env::var(\"SERVER_HOST\").unwrap_or_else(|_| \"127.0.0.1\".to_string()),\n                port: env::var(\"SERVER_PORT\")\n                    .unwrap_or_else(|_| \"3000\".to_string())\n                    .parse()\n                    .unwrap_or(3000),\n            },\n            database: DatabaseConfig {\n                host: env::var(\"DATABASE_HOST\").unwrap_or_else(|_| \"localhost\".to_string()),\n                port: env::var(\"DATABASE_PORT\")\n                    .unwrap_or_else(|_| \"5432\".to_string())\n                    .parse()\n                    .unwrap_or(5432),\n                user: env::var(\"DATABASE_USER\").unwrap_or_else(|_| \"postgres\".to_string()),\n                password: env::var(\"DATABASE_PASSWORD\").unwrap_or_default(),\n                database: env::var(\"DATABASE_NAME\").unwrap_or_else(|_| \"{{project_name}}\".to_string()),\n            },\n        }\n    }\n}\n",
+      "description": "Configuration utilities for Axum application"
+    },
+    ".env": {
+      "content": "# Server Configuration\nSERVER_HOST=127.0.0.1\nSERVER_PORT=3000\n\n# Database Configuration\nDATABASE_HOST=localhost\nDATABASE_PORT=5432\nDATABASE_USER=postgres\nDATABASE_PASSWORD=your_password\nDATABASE_NAME={{project_name}}\n\n# Logging\nRUST_LOG=info\n",
+      "description": "Environment variables configuration"
+    },
+    "README.md": {
+      "content": "# {{project_name}}\n\nA web application built with Axum framework in Rust.\n\n## Features\n\n- High-performance async web framework\n- Type-safe routing\n- Middleware support\n- JSON serialization/deserialization\n- Structured logging with tracing\n- Environment-based configuration\n\n## Getting Started\n\n### Prerequisites\n\n- Rust 1.70 or higher\n\n### Installation\n\n1. Clone the repository\n2. Install dependencies:\n   ```bash\n   cargo build\n   ```\n3. Copy `.env` and update configuration\n4. Run the application:\n   ```bash\n   cargo run\n   ```\n\n### API Endpoints\n\n- `GET /health` - Health check\n- `GET /api/v1/` - Welcome message\n- `GET /api/v1/health` - Detailed health check\n\n## Project Structure\n\n```\n.\n├── src/                 # Source code\n│   ├── handlers/        # HTTP handlers\n│   ├── models.rs        # Data models\n│   ├── middleware.rs    # Axum middleware\n│   ├── routes.rs        # Route definitions\n│   └── utils.rs         # Utilities and configuration\n├── tests/               # Integration tests\n├── migrations/          # Database migrations\n├── config/              # Configuration files\n├── scripts/             # Build and deployment scripts\n└── Cargo.toml           # Cargo configuration\n```\n\n## Development\n\n### Running Tests\n\n```bash\ncargo test\n```\n\n### Building for Production\n\n```bash\ncargo build --release\n```\n\n### Code Formatting\n\n```bash\ncargo fmt\n```\n\n### Linting\n\n```bash\ncargo clippy\n```\n\n## License\n\nThis project is licensed under the MIT License.\n",
+      "description": "Project README with setup and usage instructions"
+    },
+    "Makefile": {
+      "content": "# Makefile for {{project_name}}\n\n.PHONY: build run test clean docker-build docker-run fmt lint\n\n# Build the application\nbuild:\n\tcargo build\n\n# Run the application\nrun:\n\tcargo run\n\n# Run tests\ntest:\n\tcargo test\n\n# Clean build artifacts\nclean:\n\tcargo clean\n\n# Format code\nfmt:\n\tcargo fmt\n\n# Lint code\nlint:\n\tcargo clippy\n\n# Run with release optimizations\nrelease:\n\tcargo build --release\n\n# Docker commands\ndocker-build:\n\tdocker build -t {{project_name}}:latest .\n\ndocker-run:\n\tdocker run -p 3000:3000 {{project_name}}:latest\n",
+      "description": "Makefile with common development tasks"
+    }
+  },
+  "dependencies": {
+    "package_manager": "cargo",
+    "dependencies": [
+      "axum",
+      "tokio",
+      "tower",
+      "tower-http",
+      "serde",
+      "serde_json",
+      "tracing",
+      "tracing-subscriber",
+      "dotenvy",
+      "chrono"
+    ],
+    "dev_dependencies": ["tower"]
+  },
+  "scripts": {
+    "start": "cargo run",
+    "build": "cargo build",
+    "test": "cargo test",
+    "fmt": "cargo fmt",
+    "lint": "cargo clippy",
+    "release": "cargo build --release"
+  }
+}
