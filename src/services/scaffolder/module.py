@@ -21,6 +21,14 @@ from .observability_manager import (
     TracingType,
     ObservabilityFeature,
 )
+from .database_manager import (
+    DatabaseManager,
+    DatabaseType,
+    MigrationTool,
+    ORMType,
+    DatabaseFeature,
+    DatabaseConfig,
+)
 
 
 class ProjectScaffolderConfig(ModuleConfig):
@@ -82,6 +90,27 @@ class ProjectScaffolderConfig(ModuleConfig):
         "metrics",
         "health_checks",
     ]  # Observability features to enable
+    database_enabled: bool = True  # Whether to generate database setup
+    database_type: str = (
+        "postgresql"  # Database type (postgresql, mysql, mongodb, redis, sqlite)
+    )
+    orm_type: str = (
+        "sqlalchemy"  # ORM type (sqlalchemy, django_orm, mongoengine, pymongo, redis_py)
+    )
+    migration_tool: str = (
+        "alembic"  # Migration tool (alembic, flyway, liquibase, mongoose)
+    )
+    database_features: List[str] = [
+        "connection_pooling",
+        "migrations",
+        "seeding",
+        "backup_restore",
+    ]  # Database features to enable
+    database_host: str = "localhost"  # Database host
+    database_port: int = 5432  # Database port
+    database_name: str = "myapp"  # Database name
+    database_user: str = "myuser"  # Database username
+    database_password: str = "mypassword"  # Database password
 
 
 class Scaffolder(BaseModule):
@@ -98,6 +127,7 @@ class Scaffolder(BaseModule):
         self.security_manager = SecurityManager()
         self.testing_manager = TestingManager()
         self.observability_manager = ObservabilityManager()
+        self.database_manager = DatabaseManager()
         self.description_text = "Generates complete project structures with AI-enhanced templates, intelligent dependency management, CI/CD pipelines, and containerization configs"
         self.version = "1.0.0"
 
@@ -140,6 +170,10 @@ class Scaffolder(BaseModule):
             # Generate observability setup if requested
             if config.observability_enabled:
                 await self._generate_observability_setup(config, project_structure)
+
+            # Generate database setup if requested
+            if config.database_enabled:
+                await self._generate_database_setup(config, project_structure)
 
             # Initialize git if requested
             if config.initialize_git:
@@ -841,3 +875,62 @@ class Scaffolder(BaseModule):
             project_structure["observability"] = {}
 
         project_structure["observability"].update(observability_files)
+
+    async def _generate_database_setup(
+        self, config: ProjectScaffolderConfig, project_structure: Dict[str, Any]
+    ):
+        """Generate database setup and configuration"""
+
+        project_path = Path(config.output_directory) / config.project_name
+
+        # Convert string types to enum
+        try:
+            database_type = DatabaseType(config.database_type.lower())
+        except ValueError:
+            database_type = DatabaseType.POSTGRESQL
+
+        try:
+            orm_type = ORMType(config.orm_type.lower())
+        except ValueError:
+            orm_type = ORMType.SQLALCHEMY
+
+        try:
+            migration_tool = MigrationTool(config.migration_tool.lower())
+        except ValueError:
+            migration_tool = MigrationTool.ALEMBIC
+
+        # Convert string features to DatabaseFeature enum
+        database_features = []
+        for feature in config.database_features:
+            try:
+                database_features.append(DatabaseFeature(feature.lower()))
+            except ValueError:
+                continue  # Skip invalid features
+
+        # Create database config
+        database_config = DatabaseConfig(
+            host=config.database_host,
+            port=config.database_port,
+            database=config.database_name,
+            username=config.database_user,
+            password=config.database_password,
+        )
+
+        # Generate database setup
+        database_files = await self.database_manager.generate_database_setup(
+            project_path=project_path,
+            language=config.language,
+            framework=config.framework,
+            features=config.features,
+            database_type=database_type,
+            orm_type=orm_type,
+            migration_tool=migration_tool,
+            database_features=database_features,
+            database_config=database_config,
+        )
+
+        # Add to project structure for tracking
+        if "database" not in project_structure:
+            project_structure["database"] = {}
+
+        project_structure["database"].update(database_files)
