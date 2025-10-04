@@ -1,0 +1,86 @@
+{
+  "name": "Rocket Web Framework",
+  "description": "A web framework for Rust with a focus on usability, security, and speed",
+  "language": "rust",
+  "framework": "rocket",
+  "project_type": "web",
+  "directories": [
+    "src",
+    "src/routes",
+    "src/models",
+    "src/fairings",
+    "src/utils",
+    "tests",
+    "migrations",
+    "config",
+    "scripts",
+    "static"
+  ],
+  "files": {
+    "Cargo.toml": {
+      "content": "[package]\nname = \"{{project_name}}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\nauthors = [\"Your Name <your.email@example.com>\"]\ndescription = \"A web application built with Rocket\"\n\n[dependencies]\nrocket = { version = \"0.5.0\", features = [\"json\"] }\nserde = { version = \"1.0\", features = [\"derive\"] }\nserde_json = \"1.0\"\nchrono = { version = \"0.4\", features = [\"serde\"] }\ndotenvy = \"0.15\"\n\n[dev-dependencies]\nrocket = { version = \"0.5.0\", features = [\"debug\"] }\n",
+      "description": "Cargo.toml with Rocket and related dependencies"
+    },
+    "src/main.rs": {
+      "content": "#![feature(decl_macro)]\n\n#[macro_use] extern crate rocket;\n\nuse {{project_name}}::routes::{health, welcome};\n\n#[launch]\nfn rocket() -> _ {\n    // Load environment variables\n    dotenvy::dotenv().ok();\n\n    rocket::build()\n        .mount(\"/\", routes![health::health_check, health::detailed_health_check])\n        .mount(\"/api/v1\", routes![welcome::welcome])\n        .mount(\"/static\", rocket::fs::FileServer::from(\"static\"))\n}\n",
+      "description": "Main Rust application entry point with Rocket setup"
+    },
+    "src/lib.rs": {
+      "content": "pub mod routes;\npub mod models;\npub mod fairings;\npub mod utils;\n",
+      "description": "Library crate root with module declarations"
+    },
+    "src/routes/mod.rs": {
+      "content": "pub mod health;\npub mod welcome;\n",
+      "description": "Routes module declaration"
+    },
+    "src/routes/health.rs": {
+      "content": "use rocket::serde::json::Json;\nuse serde::Serialize;\nuse std::time::{SystemTime, UNIX_EPOCH};\n\n#[derive(Serialize)]\npub struct HealthResponse {\n    pub status: String,\n    pub timestamp: u64,\n}\n\n#[derive(Serialize)]\npub struct DetailedHealthResponse {\n    pub status: String,\n    pub timestamp: u64,\n    pub version: String,\n    pub rust_version: String,\n    pub uptime: u64,\n}\n\n#[get(\"/health\")]\npub fn health_check() -> Json<HealthResponse> {\n    let timestamp = SystemTime::now()\n        .duration_since(UNIX_EPOCH)\n        .unwrap()\n        .as_secs();\n\n    Json(HealthResponse {\n        status: \"healthy\".to_string(),\n        timestamp,\n    })\n}\n\n#[get(\"/health/detailed\")]\npub fn detailed_health_check() -> Json<DetailedHealthResponse> {\n    let timestamp = SystemTime::now()\n        .duration_since(UNIX_EPOCH)\n        .unwrap()\n        .as_secs();\n\n    Json(DetailedHealthResponse {\n        status: \"healthy\".to_string(),\n        timestamp,\n        version: env!(\"CARGO_PKG_VERSION\").to_string(),\n        rust_version: \"1.70.0\".to_string(), // Would be dynamic in real app\n        uptime: 0, // Would be calculated from start time\n    })\n}\n",
+      "description": "Health check routes for Rocket"
+    },
+    "src/routes/welcome.rs": {
+      "content": "use rocket::serde::json::Json;\nuse serde::Serialize;\n\n#[derive(Serialize)]\npub struct WelcomeResponse {\n    pub message: String,\n    pub framework: String,\n    pub language: String,\n}\n\n#[get(\"/\")]\npub fn welcome() -> Json<WelcomeResponse> {\n    Json(WelcomeResponse {\n        message: \"Welcome to {{project_name}} API\".to_string(),\n        framework: \"Rocket\".to_string(),\n        language: \"Rust\".to_string(),\n    })\n}\n",
+      "description": "Welcome route for Rocket"
+    },
+    "src/models.rs": {
+      "content": "use chrono::{DateTime, Utc};\nuse serde::{Deserialize, Serialize};\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct BaseModel {\n    pub id: Option<i32>,\n    #[serde(rename = \"created_at\")]\n    pub created_at: Option<DateTime<Utc>>,\n    #[serde(rename = \"updated_at\")]\n    pub updated_at: Option<DateTime<Utc>>,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct User {\n    #[serde(flatten)]\n    pub base: BaseModel,\n    pub name: String,\n    pub email: String,\n    #[serde(skip_serializing)]\n    pub password: String,\n    pub active: bool,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct APIResponse<T> {\n    pub success: bool,\n    pub message: Option<String>,\n    pub data: Option<T>,\n    pub errors: Option<Vec<String>>,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct ErrorResponse {\n    pub success: bool,\n    pub message: String,\n    pub errors: Option<Vec<String>>,\n    pub code: u16,\n}\n",
+      "description": "Data models for the Rocket application"
+    },
+    "src/fairings.rs": {
+      "content": "use rocket::fairing::{Fairing, Info, Kind};\nuse rocket::{Data, Request, Response};\nuse std::time::Instant;\n\npub struct RequestTimer;\n\n#[rocket::async_trait]\nimpl Fairing for RequestTimer {\n    fn info(&self) -> Info {\n        Info {\n            name: \"Request Timer\",\n            kind: Kind::Request | Kind::Response,\n        }\n    }\n\n    async fn on_request(&mut self, request: &mut Request<'_>, _data: &mut Data<'_>) {\n        request.local_cache(|| Instant::now());\n    }\n\n    async fn on_response<'r>(&mut self, request: &'r Request<'_>, response: &mut Response<'r>) {\n        let start = request.local_cache(|| Instant::now());\n        let duration = start.elapsed();\n\n        response.set_header(rocket::http::Header::new(\n            \"X-Response-Time\",\n            format!(\"{}ms\", duration.as_millis()),\n        ));\n    }\n}\n\npub struct APIVersion;\n\n#[rocket::async_trait]\nimpl Fairing for APIVersion {\n    fn info(&self) -> Info {\n        Info {\n            name: \"API Version\",\n            kind: Kind::Response,\n        }\n    }\n\n    async fn on_response<'r>(&mut self, _request: &'r Request<'_>, response: &mut Response<'r>) {\n        response.set_header(rocket::http::Header::new(\n            \"X-API-Version\",\n            \"1.0.0\",\n        ));\n    }\n}\n",
+      "description": "Fairings (middleware) for Rocket application"
+    },
+    "src/utils.rs": {
+      "content": "use std::env;\n\n#[derive(Debug, Clone)]\npub struct Config {\n    pub server: ServerConfig,\n    pub database: DatabaseConfig,\n}\n\n#[derive(Debug, Clone)]\npub struct ServerConfig {\n    pub port: u16,\n    pub address: String,\n}\n\n#[derive(Debug, Clone)]\npub struct DatabaseConfig {\n    pub host: String,\n    pub port: u16,\n    pub user: String,\n    pub password: String,\n    pub database: String,\n}\n\nimpl Config {\n    pub fn from_env() -> Self {\n        Self {\n            server: ServerConfig {\n                port: env::var(\"ROCKET_PORT\")\n                    .unwrap_or_else(|_| \"8000\".to_string())\n                    .parse()\n                    .unwrap_or(8000),\n                address: env::var(\"ROCKET_ADDRESS\")\n                    .unwrap_or_else(|_| \"127.0.0.1\".to_string()),\n            },\n            database: DatabaseConfig {\n                host: env::var(\"DATABASE_HOST\").unwrap_or_else(|_| \"localhost\".to_string()),\n                port: env::var(\"DATABASE_PORT\")\n                    .unwrap_or_else(|_| \"5432\".to_string())\n                    .parse()\n                    .unwrap_or(5432),\n                user: env::var(\"DATABASE_USER\").unwrap_or_else(|_| \"postgres\".to_string()),\n                password: env::var(\"DATABASE_PASSWORD\").unwrap_or_default(),\n                database: env::var(\"DATABASE_NAME\").unwrap_or_else(|_| \"{{project_name}}\".to_string()),\n            },\n        }\n    }\n}\n",
+      "description": "Configuration utilities for Rocket application"
+    },
+    ".env": {
+      "content": "# Rocket Configuration\nROCKET_PORT=8000\nROCKET_ADDRESS=127.0.0.1\nROCKET_LOG_LEVEL=normal\n\n# Database Configuration\nDATABASE_HOST=localhost\nDATABASE_PORT=5432\nDATABASE_USER=postgres\nDATABASE_PASSWORD=your_password\nDATABASE_NAME={{project_name}}\n\n# Logging\nRUST_LOG=rocket=info\n",
+      "description": "Environment variables configuration"
+    },
+    "Rocket.toml": {
+      "content": "[global]\naddress = \"127.0.0.1\"\nport = 8000\nlog_level = \"normal\"\n\n[debug]\ntemplate_dir = \"templates/\"\n\n[release]\nport = 8000\naddress = \"0.0.0.0\"\nlog_level = \"critical\"\n",
+      "description": "Rocket configuration file"
+    },
+    "README.md": {
+      "content": "# {{project_name}}\n\nA web application built with Rocket framework in Rust.\n\n## Features\n\n- Type-safe routing with macros\n- Built-in JSON support\n- Fairings (middleware) system\n- Environment-based configuration\n- Rocket.toml configuration\n- Request/response timing\n\n## Getting Started\n\n### Prerequisites\n\n- Rust 1.70 or higher\n\n### Installation\n\n1. Clone the repository\n2. Install dependencies:\n   ```bash\n   cargo build\n   ```\n3. Copy `.env` and update configuration\n4. Run the application:\n   ```bash\n   cargo run\n   ```\n\n### API Endpoints\n\n- `GET /health` - Health check\n- `GET /health/detailed` - Detailed health check\n- `GET /api/v1/` - Welcome message\n\n## Project Structure\n\n```\n.\n├── src/                 # Source code\n│   ├── routes/          # Route handlers\n│   ├── models.rs        # Data models\n│   ├── fairings.rs      # Rocket fairings (middleware)\n│   └── utils.rs         # Utilities and configuration\n├── tests/               # Integration tests\n├── migrations/          # Database migrations\n├── config/              # Configuration files\n├── scripts/             # Build and deployment scripts\n├── static/              # Static files\n├── Cargo.toml           # Cargo configuration\n└── Rocket.toml          # Rocket configuration\n```\n\n## Development\n\n### Running Tests\n\n```bash\ncargo test\n```\n\n### Building for Production\n\n```bash\ncargo build --release\n```\n\n### Code Formatting\n\n```bash\ncargo fmt\n```\n\n### Linting\n\n```bash\ncargo clippy\n```\n\n## License\n\nThis project is licensed under the MIT License.\n",
+      "description": "Project README with setup and usage instructions"
+    },
+    "Makefile": {
+      "content": "# Makefile for {{project_name}}\n\n.PHONY: build run test clean docker-build docker-run fmt lint\n\n# Build the application\nbuild:\n\tcargo build\n\n# Run the application\nrun:\n\tcargo run\n\n# Run tests\ntest:\n\tcargo test\n\n# Clean build artifacts\nclean:\n\tcargo clean\n\n# Format code\nfmt:\n\tcargo fmt\n\n# Lint code\nlint:\n\tcargo clippy\n\n# Run with release optimizations\nrelease:\n\tcargo build --release\n\n# Docker commands\ndocker-build:\n\tdocker build -t {{project_name}}:latest .\n\ndocker-run:\n\tdocker run -p 8000:8000 {{project_name}}:latest\n",
+      "description": "Makefile with common development tasks"
+    }
+  },
+  "dependencies": {
+    "package_manager": "cargo",
+    "dependencies": ["rocket", "serde", "serde_json", "chrono", "dotenvy"],
+    "dev_dependencies": ["rocket"]
+  },
+  "scripts": {
+    "start": "cargo run",
+    "build": "cargo build",
+    "test": "cargo test",
+    "fmt": "cargo fmt",
+    "lint": "cargo clippy",
+    "release": "cargo build --release"
+  }
+}
