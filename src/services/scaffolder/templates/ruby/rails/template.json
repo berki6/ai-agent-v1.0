@@ -1,0 +1,160 @@
+{
+  "name": "Ruby on Rails Framework",
+  "description": "A full-stack web framework optimized for programmer happiness and sustainable productivity",
+  "language": "ruby",
+  "framework": "rails",
+  "project_type": "web",
+  "directories": [
+    "app",
+    "app/controllers",
+    "app/models",
+    "app/views",
+    "app/views/layouts",
+    "app/helpers",
+    "app/mailers",
+    "app/jobs",
+    "app/channels",
+    "app/assets",
+    "app/assets/stylesheets",
+    "app/assets/javascripts",
+    "app/assets/images",
+    "bin",
+    "config",
+    "config/environments",
+    "config/initializers",
+    "config/locales",
+    "db",
+    "db/migrate",
+    "lib",
+    "lib/tasks",
+    "log",
+    "public",
+    "storage",
+    "tmp",
+    "tmp/cache",
+    "tmp/pids",
+    "tmp/sockets",
+    "vendor",
+    "test",
+    "test/controllers",
+    "test/models",
+    "test/integration",
+    "test/system",
+    "spec"
+  ],
+  "files": {
+    "Gemfile": {
+      "content": "source 'https://rubygems.org'\ngit_source(:github) { |repo| \"https://github.com/#{repo}.git\" }\n\nruby '3.2.0'\n\n# Bundle edge Rails instead: gem 'rails', github: 'rails/rails', branch: 'main'\ngem 'rails', '~> 7.1.0'\n\n# The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]\ngem 'sprockets-rails'\n\n# Use sqlite3 as the database for Active Record\ngem 'sqlite3', '~> 1.4'\n\n# Use the Puma web server [https://github.com/puma/puma]\ngem 'puma', '~> 6.0'\n\n# Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]\ngem 'importmap-rails'\n\n# Hotwire's SPA-like page accelerator [https://turbo.hotwired.dev]\ngem 'turbo-rails'\n\n# Hotwire's modest JavaScript framework [https://stimulus.hotwired.dev]\ngem 'stimulus-rails'\n\n# Build JSON APIs with ease [https://github.com/rails/jbuilder]\ngem 'jbuilder'\n\n# Use Redis adapter to run Action Cable in production\ngem 'redis', '~> 4.0'\n\n# Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]\n# gem 'kredis'\n\n# Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]\ngem 'bcrypt', '~> 3.1.7'\n\n# Windows does not include zoneinfo files, so bundle the tzinfo-data gem\ngem 'tzinfo-data', platforms: %i[ mingw mswin x64_mingw jruby ]\n\n# Reduces boot times through caching; required in config/boot.rb\ngem 'bootsnap', require: false\n\n# Use Sass to process CSS\ngem 'sassc-rails'\n\n# Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]\n# gem 'image_processing', '~> 1.2'\n\ngroup :development, :test do\n  # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem\n  gem 'debug', platforms: %i[ mri mingw mswin x64_mingw ]\n  gem 'rspec-rails', '~> 6.0.0'\n  gem 'factory_bot_rails'\n  gem 'faker'\nend\n\ngroup :development do\n  # Use console on exceptions pages [https://github.com/rails/web-console]\n  gem 'web-console'\n\n  # Add speed badges [https://github.com/MiniProfiler/rack-mini-profiler]\n  # gem 'rack-mini-profiler'\n\n  # Speed up commands on slow machines / big apps [https://github.com/rails/spring]\n  # gem 'spring'\nend\n\ngroup :test do\n  # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]\n  gem 'capybara'\n  gem 'selenium-webdriver'\n  gem 'webdrivers'\nend\n",
+      "description": "Gemfile with Rails and related dependencies"
+    },
+    "config/application.rb": {
+      "content": "require_relative \"boot\"\n\nrequire \"rails/all\"\n\n# Require the gems listed in Gemfile, including any gems\n# you've limited to :test, :development, or :production.\nBundler.require(*Rails.groups)\n\nmodule {{project_name | replace('-', '') | camelcase}}\n  class Application < Rails::Application\n    # Initialize configuration defaults for originally generated Rails version.\n    config.load_defaults 7.1\n\n    # Please, add to the `ignore` list any other `lib` subdirectories that do\n    # not contain `.rb` files, or that should not be reloaded or eager loaded.\n    # Common ones are `templates`, `generators`, or `middleware`, for example.\n    config.autoload_lib(ignore: %w(assets tasks))\n\n    # Configuration for the application, engines, and railties goes here.\n    #\n    # These settings can be overridden in specific environments using the files\n    # in config/environments, which are processed later.\n    #\n    # config.time_zone = \"Central Time (US & Canada)\"\n    # config.eager_load_paths << Rails.root.join(\"extras\")\n\n    # Don't generate system test files.\n    config.generators.system_tests = nil\n\n    # API-only configuration\n    config.api_only = true\n  end\nend\n",
+      "description": "Rails application configuration"
+    },
+    "config/routes.rb": {
+      "content": "Rails.application.routes.draw do\n  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html\n\n  # API routes\n  namespace :api do\n    namespace :v1 do\n      get 'welcome', to: 'welcome#index'\n      get 'health', to: 'health#index'\n      get 'health/detailed', to: 'health#detailed'\n    end\n  end\n\n  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.\n  # Can be used by load balancers and uptime monitors to verify that the app is live.\n  get \"up\" => \"rails/health#show\", as: :rails_health_check\n\n  # Defines the root path route (\"/\")\n  # root \"posts#index\"\nend\n",
+      "description": "Rails routes configuration"
+    },
+    "config/database.yml": {
+      "content": "# SQLite. Versions 3.8.0 and up are supported.\n#   gem install sqlite3\n#\n#   Ensure the SQLite 3 gem is defined in your Gemfile\n#   gem 'sqlite3'\n#\ndefault: &default\n  adapter: sqlite3\n  pool: <%= ENV.fetch(\"RAILS_MAX_THREADS\") { 5 } %>\n  timeout: 5000\n\ndevelopment:\n  <<: *default\n  database: db/development.sqlite3\n\n# Warning: The database defined as \"test\" will be erased and\n# re-generated from your schema.rb when you run \"rake\".\n# Do not set this db to the same as development or production.\ntest:\n  <<: *default\n  database: db/test.sqlite3\n\nproduction:\n  <<: *default\n  database: db/production.sqlite3\n",
+      "description": "Database configuration for different environments"
+    },
+    "app/controllers/application_controller.rb": {
+      "content": "class ApplicationController < ActionController::API\n  # Only for API applications\nend\n",
+      "description": "Base application controller"
+    },
+    "app/controllers/api/v1/welcome_controller.rb": {
+      "content": "module Api\n  module V1\n    class WelcomeController < ApplicationController\n      def index\n        render json: {\n          message: 'Welcome to {{project_name}} API',\n          framework: 'Ruby on Rails',\n          language: 'Ruby',\n          timestamp: Time.current.iso8601\n        }\n      end\n    end\n  end\nend\n",
+      "description": "Welcome API controller"
+    },
+    "app/controllers/api/v1/health_controller.rb": {
+      "content": "module Api\n  module V1\n    class HealthController < ApplicationController\n      def index\n        render json: {\n          status: 'healthy',\n          timestamp: Time.current.iso8601,\n          service: '{{project_name}}',\n          framework: 'Ruby on Rails',\n          language: 'Ruby'\n        }\n      end\n\n      def detailed\n        render json: {\n          status: 'healthy',\n          timestamp: Time.current.iso8601,\n          service: '{{project_name}}',\n          version: '1.0.0',\n          ruby_version: RUBY_VERSION,\n          rails_version: Rails.version,\n          environment: Rails.env,\n          uptime: Process.clock_gettime(Process::CLOCK_MONOTONIC)\n        }\n      end\n    end\n  end\nend\n",
+      "description": "Health check API controller"
+    },
+    "app/models/application_record.rb": {
+      "content": "class ApplicationRecord < ActiveRecord::Base\n  primary_abstract_class\nend\n",
+      "description": "Base ActiveRecord class"
+    },
+    "app/models/user.rb": {
+      "content": "class User < ApplicationRecord\n  # Include default devise modules. Others available are:\n  # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable\n  # devise :database_authenticatable, :registerable,\n  #        :recoverable, :rememberable, :validatable\n\n  validates :username, presence: true, uniqueness: true\n  validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }\n  validates :password, presence: true, length: { minimum: 6 }, if: :password_required?\n\n  has_secure_password\n\n  before_save :downcase_email\n\n  private\n\n  def downcase_email\n    self.email = email.downcase if email.present?\n  end\n\n  def password_required?\n    new_record? || password.present?\n  end\nend\n",
+      "description": "User model with validations"
+    },
+    "db/migrate/001_create_users.rb": {
+      "content": "class CreateUsers < ActiveRecord::Migration[7.1]\n  def change\n    create_table :users do |t|\n      t.string :username, null: false\n      t.string :email, null: false\n      t.string :password_digest, null: false\n      t.boolean :is_active, default: true, null: false\n\n      t.timestamps\n    end\n\n    add_index :users, :username, unique: true\n    add_index :users, :email, unique: true\n  end\nend\n",
+      "description": "Users table migration"
+    },
+    "app/views/layouts/application.html.erb": {
+      "content": "<!DOCTYPE html>\n<html>\n<head>\n  <title>{{project_name}}</title>\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <%= csrf_meta_tags %>\n  <%= csp_meta_tag %>\n\n  <%= stylesheet_link_tag \"application\", \"data-turbo-track\": \"reload\" %>\n  <%= javascript_importmap_tags %>\n</head>\n\n<body>\n  <%= yield %>\n</body>\n</html>\n",
+      "description": "Main application layout"
+    },
+    "app/assets/stylesheets/application.css": {
+      "content": "/*\n * This is a manifest file that'll be compiled into application.css, which will include all the files\n * listed below.\n *\n * Any CSS and SCSS file within this directory, lib/assets/stylesheets, or any plugin's\n * vendor/assets/stylesheets directory can be referenced here using a relative path.\n *\n * You're free to add application-wide styles to this file and they'll appear at the bottom of the\n * compiled file so the styles you add here take precedence over styles defined in any other CSS\n * files in this directory. Styles in this file should be added after the last require_* statement.\n * It is generally better to create a new file per style scope.\n *\n *= require_tree .\n *= require_self\n */\n\n/* Custom styles */\nbody {\n  background-color: #fff;\n  color: #333;\n  font-family: verdana, arial, helvetica, sans-serif;\n  font-size: 13px;\n  line-height: 18px;\n  margin: 33px;\n}\n\np, ol, ul, td {\n  font-family: verdana, arial, helvetica, sans-serif;\n  font-size: 13px;\n  line-height: 18px;\n  margin: 33px;\n}\n\npre {\n  background-color: #eee;\n  padding: 10px;\n  font-size: 11px;\n}\n\na {\n  color: #000;\n}\n\na:visited {\n  color: #666;\n}\n\na:hover {\n  color: #fff;\n  background-color: #000;\n}\n",
+      "description": "Application stylesheet"
+    },
+    "app/assets/javascripts/application.js": {
+      "content": "// Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails\n//= require rails-ujs\n\nconsole.log('{{project_name}} JavaScript loaded');\n",
+      "description": "Application JavaScript"
+    },
+    "config/importmap.rb": {
+      "content": "# Pin npm packages by running ./bin/importmap\n\npin \"application\", preload: true\npin \"@hotwired/turbo-rails\", to: \"turbo.min.js\", preload: true\npin \"@hotwired/stimulus\", to: \"stimulus.min.js\", preload: true\npin \"@hotwired/stimulus-loading\", to: \"stimulus-loading.js\", preload: true\npin \"@rails/actioncable\", to: \"actioncable.esm.js\"\npin_all_from \"app/javascript/controllers\", under: \"controllers\"\n",
+      "description": "Import map configuration for JavaScript modules"
+    },
+    "config/environments/development.rb": {
+      "content": "require \"active_support/core_ext/integer/time\"\n\nRails.application.configure do\n  # Settings specified here will take precedence over those in config/application.rb.\n\n  # In the development environment your application's code is reloaded any time\n  # your application files change. This slows down response time but is perfect for development\n  # since you don't have to restart the web server when you make code changes.\n  config.cache_classes = false\n\n  # Do not eager load code on boot.\n  config.eager_load = false\n\n  # Show full error reports.\n  config.consider_all_requests_local = true\n\n  # Enable/disable caching. By default caching is disabled.\n  # Run rails dev:cache to toggle caching.\n  if Rails.root.join('tmp', 'caching-dev.txt').exist?\n    config.action_controller.perform_caching = true\n    config.action_controller.enable_fragment_cache_logging = true\n\n    config.cache_store = :memory_store\n    config.public_file_server.headers = {\n      'Cache-Control' => \"public, max-age=#{2.days.to_i}\"\n    }\n  else\n    config.action_controller.perform_caching = false\n\n    config.cache_store = :null_store\n  end\n\n  # Store uploaded files on the local file system (see config/storage.yml for options).\n  config.active_storage.service = :local\n\n  # Don't care if the mailer can't send.\n  config.action_mailer.raise_delivery_errors = false\n\n  config.action_mailer.perform_caching = false\n\n  # Print deprecation notices to the Rails logger.\n  config.active_support.deprecation = :log\n\n  # Raise exceptions for disallowed deprecations.\n  config.active_support.disallowed_deprecation = :raise\n\n  # Tell Active Support which deprecation behaviors to disallow.\n  config.active_support.disallowed_deprecation_warnings = []\n\n  # Raise an error on page load if there are pending migrations.\n  config.active_record.migration_error = :page_load\n\n  # Highlight code that triggered database queries in logs.\n  config.active_record.verbose_query_logs = true\n\n  # Debug mode disables concatenation and preprocessing of assets.\n  # This option may cause significant delays in view rendering with a large\n  # number of complex assets.\n  config.assets.debug = true\n\n  # Suppress logger output for asset requests.\n  config.assets.quiet = true\n\n  # Raises error for missing translations.\n  config.i18n.raise_on_missing_translations = true\n\n  # Annotate rendered view with file names.\n  config.action_view.annotate_rendered_view_with_filenames = true\n\n  # Use an evented file watcher to asynchronously detect changes in source code,\n  # routes, locales, etc. This feature depends on the listen gem.\n  config.file_watcher = ActiveSupport::EventedFileWatcher\n\n  # Uncomment if you wish to allow Action Cable access from any origin.\n  # config.action_cable.disable_request_forgery_protection = true\nend\n",
+      "description": "Development environment configuration"
+    },
+    "config/environments/production.rb": {
+      "content": "require \"active_support/core_ext/integer/time\"\n\nRails.application.configure do\n  # Settings specified here will take precedence over those in config/application.rb.\n\n  # Code is not reloaded between requests.\n  config.cache_classes = true\n\n  # Eager load code on boot. This eager loads most of Rails and\n  # your application in memory, allowing both threaded web servers\n  # and those relying on copy on write to perform better.\n  # Rake tasks automatically ignore this option for performance.\n  config.eager_load = true\n\n  # Full error reports are disabled and caching is turned on.\n  config.consider_all_requests_local = false\n  config.action_controller.perform_caching = true\n\n  # Ensures that a master key has been made available in either ENV[\"RAILS_MASTER_KEY\"]\n  # or in config/master.key. This key is used to decrypt credentials (and other encrypted files).\n  # config.require_master_key = true\n\n  # Disable serving static files from the `/public` folder by default since\n  # Apache or NGINX already handles this.\n  config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?\n\n  # Compress CSS using a preprocessor.\n  # config.assets.css_compressor = :sass\n\n  # Do not fallback to assets pipeline if a precompiled asset is missed.\n  config.assets.compile = false\n\n  # Enable serving of images, stylesheets, and JavaScripts from an asset server.\n  # config.asset_host = ENV['ASSET_HOST']\n\n  # Specifies the header that your server uses for sending files.\n  # config.action_dispatch.x_sendfile_header = 'X-Sendfile' # for Apache\n  # config.action_dispatch.x_sendfile_header = 'X-Accel-Redirect' # for NGINX\n\n  # Store uploaded files on the local file system (see config/storage.yml for options).\n  config.active_storage.service = :local\n\n  # Mount Action Cable outside main process or domain.\n  # config.action_cable.mount_path = nil\n  # config.action_cable.url = ENV.fetch(\"ACTION_CABLE_FRONTEND_URL\", \"ws://localhost:28080\")\n  # config.action_cable.allowed_request_origins = [ ENV.fetch(\"ACTION_CABLE_FRONTEND_URL\", \"http://localhost:28080\") ]\n\n  # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.\n  # config.force_ssl = true\n\n  # Include generic and useful information about system operation, but avoid logging too much\n  # information to avoid inadvertent exposure of personally identifiable information (PII).\n  config.log_level = :info\n\n  # Prepend all log lines with the following tags.\n  config.log_tags = [ :request_id ]\n\n  # Use a different cache store in production.\n  # config.cache_store = :mem_cache_store\n\n  # Use a real queuing backend for Active Job (and separate queues per environment).\n  # config.active_job.queue_adapter = :resque\n  # config.active_job.queue_name_prefix = \"{{project_name | replace('-', '') | downcase}}_production\"\n\n  config.action_mailer.perform_caching = false\n\n  # Ignore bad email addresses and do not raise email delivery errors.\n  # Set this to true and configure the email server for immediate delivery to raise delivery errors.\n  # config.action_mailer.raise_delivery_errors = false\n\n  # Enable locale fallbacks for I18n (makes lookups for any locale fall back to\n  # the I18n.default_locale when a translation cannot be found).\n  config.i18n.fallbacks = true\n\n  # Send deprecation notices to registered listeners.\n  config.active_support.deprecation = :notify\n\n  # Log disallowed deprecations.\n  config.active_support.disallowed_deprecation = :log\n\n  # Tell Active Support which deprecation behaviors to disallow.\n  config.active_support.disallowed_deprecation_warnings = []\n\n  # Use default logging formatter so that PID and timestamp are not suppressed.\n  config.log_formatter = ::Logger::Formatter.new\n\n  # Use a different logger for distributed setups.\n  # require \"syslog/logger\"\n  # config.logger = ActiveSupport::TaggedLogging.new(Syslog::Logger.new 'app-name')\n\n  if ENV[\"RAILS_LOG_TO_STDOUT\"].present?\n    logger = ActiveSupport::Logger.new(STDOUT)\n    logger.formatter = config.log_formatter\n    config.logger = ActiveSupport::TaggedLogging.new(logger)\n  end\n\n  # Do not dump schema after migrations.\n  config.active_record.dump_schema_after_migration = false\nend\n",
+      "description": "Production environment configuration"
+    },
+    "spec/rails_helper.rb": {
+      "content": "# This file is copied to spec/ when you run 'rails generate rspec:install'\nENV['RAILS_ENV'] ||= 'test'\nrequire File.expand_path('../config/environment', __dir__)\n# Prevent database truncation if the environment is production\nabort('The Rails environment is running in production mode!') if Rails.env.production?\nrequire 'rspec/rails'\n# Add additional requires below this line. Rails is not loaded until this point!\n\n# Requires supporting ruby files with custom matchers and macros, etc, in\n# spec/support/ and its subdirectories. Files matching `spec/**/*_spec.rb` are\n# run as spec files by default. This means that files in spec/support that end\n# in _spec.rb will both be required and run as specs, causing the specs to be\n# run twice. It is recommended that you do not name files matching this glob to\n# end with _spec.rb. You can configure this pattern with the --pattern\n# option on the command line or in ~/.rspec, .rspec or `.rspec-local`.\n#\n# The following line is provided for convenience purposes. It has the downside\n# of increasing the boot-up time by auto-requiring all files in the support\n# directory. Alternatively, in the individual `*_spec.rb` files, manually\n# require only the support files necessary.\n#\n# Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }\n\n# Checks for pending migrations and applies them before tests are run.\n# If you are not using ActiveRecord, you can remove these lines.\nbegin\n  ActiveRecord::Migration.maintain_test_schema!\nrescue ActiveRecord::PendingMigrationError => e\n  abort e.to_s.strip\nend\nRSpec.configure do |config|\n  # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures\n  config.fixture_path = \"#{::Rails.root}/spec/fixtures\"\n\n  # If you're not using ActiveRecord, or you'd prefer not to run each of your\n  # examples within a transaction, remove the following line or assign false\n  # instead of true.\n  config.use_transactional_fixtures = true\n\n  # You can uncomment this line to turn off ActiveRecord support entirely.\n  # config.use_active_record = false\n\n  # RSpec Rails can automatically mix in different behaviours to your tests\n  # based on their file location, for example enabling you to call `get` and\n  # `post` in specs under `spec/controllers`.\n  #\n  # You can disable this behaviour by removing the line below, and instead\n  # explicitly tag your specs with their type, e.g.:\n  #\n  #     RSpec.describe UsersController, type: :controller do\n  #       # ...\n  #     end\n  #\n  # The different available types are documented in the features, such as in\n  # https://relishapp.com/rspec/rspec-rails/docs\n  config.infer_spec_type_from_file_location!\n\n  # Filter lines from Rails gems in backtraces.\n  config.filter_rails_from_backtraces!\n  # arbitrary gems may also be filtered via:\n  # config.filter_gems_from_backtraces(\"gem name\")\nend\n",
+      "description": "RSpec configuration for Rails testing"
+    },
+    "README.md": {
+      "content": "# {{project_name}}\n\nA web application built with Ruby on Rails framework.\n\n## Features\n\n- Ruby on Rails 7.1 with Ruby 3.2\n- API-only application structure\n- RESTful API endpoints\n- SQLite database for development\n- PostgreSQL/MySQL support for production\n- RSpec for testing\n- Hotwire for modern web features\n- Import maps for JavaScript management\n- Comprehensive testing setup\n\n## Getting Started\n\n### Prerequisites\n\n- Ruby 3.2.0 or higher\n- Rails 7.1\n- SQLite (or PostgreSQL/MySQL for production)\n\n### Installation\n\n1. Clone the repository\n2. Install dependencies:\n   ```bash\n   bundle install\n   ```\n3. Setup database:\n   ```bash\n   rails db:create db:migrate\n   ```\n4. Start the development server:\n   ```bash\n   rails server\n   ```\n\n### API Endpoints\n\n- `GET /api/v1/welcome` - Welcome message\n- `GET /api/v1/health` - Health check\n- `GET /api/v1/health/detailed` - Detailed health check\n- `GET /up` - Rails health check\n\n## Project Structure\n\n```\n.\n├── app/                     # Application code\n│   ├── controllers/         # Controllers\n│   ├── models/              # Models\n│   ├── views/               # Views (layouts)\n│   ├── assets/              # Assets (CSS, JS, images)\n│   └── helpers/             # Helper methods\n├── bin/                     # Executable scripts\n├── config/                  # Configuration files\n│   ├── environments/        # Environment-specific configs\n│   ├── initializers/        # Initializers\n│   └── locales/             # Localization files\n├── db/                      # Database files\n│   └── migrate/             # Database migrations\n├── lib/                     # Library code\n├── log/                     # Application logs\n├── public/                  # Static files\n├── storage/                 # Active Storage files\n├── tmp/                     # Temporary files\n├── spec/                    # RSpec tests\n└── Gemfile                  # Ruby dependencies\n```\n\n## Development\n\n### Running Tests\n\n```bash\nbundle exec rspec\n```\n\n### Database Operations\n\n```bash\nrails db:migrate\nrails db:seed\nrails db:rollback\n```\n\n### Rails Console\n\n```bash\nrails console\n```\n\n## Configuration\n\nUpdate `config/database.yml` and `.env` files with your database and other configuration settings.\n\n## License\n\nThis project is licensed under the MIT License.\n",
+      "description": "Project README with setup and usage instructions"
+    },
+    "Makefile": {
+      "content": "# Makefile for {{project_name}}\n\n.PHONY: install server test migrate seed console clean setup\n\n# Install dependencies\ninstall:\n\tbundle install\n\n# Start development server\nserver:\n\trails server\n\n# Run tests\ntest:\n\tbundle exec rspec\n\n# Run migrations\nmigrate:\n\trails db:migrate\n\n# Run seeders\nseed:\n\trails db:seed\n\n# Open Rails console\nconsole:\n\trails console\n\n# Clean dependencies\nclean:\n\trm -rf vendor/bundle\n\n# Full setup\nsetup: install migrate seed\n",
+      "description": "Makefile with common development tasks"
+    }
+  },
+  "dependencies": {
+    "package_manager": "bundler",
+    "dependencies": [
+      "rails",
+      "sprockets-rails",
+      "sqlite3",
+      "puma",
+      "importmap-rails",
+      "turbo-rails",
+      "stimulus-rails",
+      "jbuilder",
+      "redis",
+      "bcrypt",
+      "tzinfo-data",
+      "bootsnap",
+      "sassc-rails"
+    ],
+    "dev_dependencies": [
+      "debug",
+      "rspec-rails",
+      "factory_bot_rails",
+      "faker",
+      "web-console",
+      "capybara",
+      "selenium-webdriver",
+      "webdrivers"
+    ]
+  },
+  "scripts": {
+    "start": "rails server",
+    "install": "bundle install",
+    "test": "bundle exec rspec",
+    "migrate": "rails db:migrate",
+    "seed": "rails db:seed",
+    "console": "rails console",
+    "clean": "rm -rf vendor/bundle"
+  }
+}
