@@ -9,6 +9,8 @@ from src.core.base_module import BaseModule, ModuleConfig, ModuleResult
 from src.core.ai_utils import AIUtils
 from .template_manager import TemplateManager
 from .dependency_manager import DependencyManager
+from .ci_cd_manager import CICDPipelineManager
+from .containerization_manager import ContainerizationManager
 
 
 class ProjectScaffolderConfig(ModuleConfig):
@@ -29,6 +31,12 @@ class ProjectScaffolderConfig(ModuleConfig):
         True  # Whether to check for dependency vulnerabilities
     )
     resolve_conflicts: bool = True  # Whether to resolve dependency conflicts
+    ci_cd_platforms: List[str] = (
+        []
+    )  # CI/CD platforms to generate (github-actions, gitlab-ci, jenkins, circleci)
+    deployment_targets: List[str] = (
+        []
+    )  # Deployment targets (docker, aws, kubernetes, heroku)
 
 
 class Scaffolder(BaseModule):
@@ -39,7 +47,8 @@ class Scaffolder(BaseModule):
         self.ai_utils = AIUtils()
         self.template_manager = TemplateManager()
         self.dependency_manager = DependencyManager()
-        self.description_text = "Generates complete project structures using AI-enhanced templates with intelligent dependency management"
+        self.ci_cd_manager = CICDPipelineManager()
+        self.description_text = "Generates complete project structures with AI-enhanced templates, intelligent dependency management, and CI/CD pipelines"
         self.version = "1.0.0"
 
     def get_description(self) -> str:
@@ -57,6 +66,10 @@ class Scaffolder(BaseModule):
 
             # Create the project
             await self._create_project(config, project_structure)
+
+            # Generate CI/CD pipelines if requested
+            if config.ci_cd_platforms:
+                await self._generate_ci_cd_pipelines(config, project_structure)
 
             # Initialize git if requested
             if config.initialize_git:
@@ -434,3 +447,44 @@ class Scaffolder(BaseModule):
         finally:
             # Return to original directory
             os.chdir(Path.cwd().parent)
+
+    async def _generate_ci_cd_pipelines(
+        self, config: ProjectScaffolderConfig, project_structure: Dict[str, Any]
+    ):
+        """Generate CI/CD pipeline configurations"""
+
+        project_path = Path(config.output_directory) / config.project_name
+
+        for platform in config.ci_cd_platforms:
+            try:
+                pipeline_config = self.ci_cd_manager.generate_pipeline(
+                    platform=platform,
+                    language=config.language,
+                    framework=config.framework,
+                    features=config.features,
+                    deployment_targets=config.deployment_targets,
+                )
+
+                # Add pipeline files to project structure
+                for file_path, file_info in pipeline_config.get("files", {}).items():
+                    full_path = project_path / file_path
+                    full_path.parent.mkdir(parents=True, exist_ok=True)
+
+                    with open(full_path, "w", encoding="utf-8") as f:
+                        f.write(file_info.get("content", ""))
+
+                    # Add to project structure for tracking
+                    if "ci_cd_pipelines" not in project_structure:
+                        project_structure["ci_cd_pipelines"] = []
+
+                    project_structure["ci_cd_pipelines"].append(
+                        {
+                            "platform": platform,
+                            "file": file_path,
+                            "description": file_info.get("description", ""),
+                        }
+                    )
+
+            except Exception as e:
+                # Log error but continue with other platforms
+                print(f"Failed to generate {platform} pipeline: {e}")
