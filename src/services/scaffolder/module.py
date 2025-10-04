@@ -55,6 +55,7 @@ from .project_management_manager import (
     ProjectManagementFeature,
     ProjectManagementConfig,
 )
+from .parallel_scaffolder import ParallelScaffolder
 
 
 class ProjectScaffolderConfig(ModuleConfig):
@@ -234,6 +235,9 @@ class Scaffolder(BaseModule):
         self.api_documentation_manager = APIDocumentationManager()
         self.code_quality_manager = CodeQualityManager()
         self.project_management_manager = ProjectManagementManager()
+        self.parallel_scaffolder = ParallelScaffolder(
+            max_workers=8
+        )  # Configurable parallelism
         self.description_text = "Generates complete project structures with AI-enhanced templates, intelligent dependency management, CI/CD pipelines, and containerization configs"
         self.version = "1.0.0"
 
@@ -251,7 +255,7 @@ class Scaffolder(BaseModule):
             project_structure = await self._generate_project_structure(config)
 
             # Create the project
-            await self._create_project(config, project_structure)
+            await self._create_project_parallel(config, project_structure)
 
             # Generate CI/CD pipelines if requested
             if config.ci_cd_platforms:
@@ -500,6 +504,26 @@ class Scaffolder(BaseModule):
             merged["scripts"] = base_scripts
 
         return merged
+
+    async def _create_project_parallel(
+        self, config: ProjectScaffolderConfig, project_structure: Dict[str, Any]
+    ) -> None:
+        """Create the project files and directories using parallel operations"""
+
+        # Create project directory
+        project_path = Path(config.output_directory) / config.project_name
+        project_path.mkdir(parents=True, exist_ok=True)
+
+        # Use parallel scaffolder for efficient file creation
+        creation_stats = await self.parallel_scaffolder.create_project_structure(
+            project_path, project_structure
+        )
+
+        # Log creation statistics (optional - could be added to result)
+        print(
+            f"Created project with {creation_stats['created_directories']} directories, "
+            f"{creation_stats['created_files']} files, and {creation_stats['created_scripts']} scripts"
+        )
 
     async def _generate_with_ai_fallback(
         self, config: ProjectScaffolderConfig
