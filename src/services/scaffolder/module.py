@@ -14,6 +14,13 @@ from .containerization_manager import ContainerizationManager
 from .environment_manager import EnvironmentManager
 from .security_manager import SecurityManager, AuthType, SecurityFeature
 from .testing_manager import TestingManager, TestFramework, TestType
+from .observability_manager import (
+    ObservabilityManager,
+    MonitoringType,
+    LoggingType,
+    TracingType,
+    ObservabilityFeature,
+)
 
 
 class ProjectScaffolderConfig(ModuleConfig):
@@ -62,6 +69,19 @@ class ProjectScaffolderConfig(ModuleConfig):
     test_types: List[str] = ["unit", "integration"]  # Types of tests to generate
     include_coverage: bool = True  # Whether to include test coverage
     ci_testing_integration: bool = True  # Whether to include CI testing integration
+    observability_enabled: bool = True  # Whether to generate observability setup
+    monitoring_type: str = (
+        "prometheus"  # Monitoring type (prometheus, grafana, datadog, etc.)
+    )
+    logging_type: str = "elk"  # Logging type (elk, efk, loki, etc.)
+    tracing_type: str = "jaeger"  # Tracing type (jaeger, zipkin, opentelemetry, etc.)
+    observability_features: List[str] = [
+        "monitoring",
+        "logging",
+        "tracing",
+        "metrics",
+        "health_checks",
+    ]  # Observability features to enable
 
 
 class Scaffolder(BaseModule):
@@ -77,6 +97,7 @@ class Scaffolder(BaseModule):
         self.environment_manager = EnvironmentManager()
         self.security_manager = SecurityManager()
         self.testing_manager = TestingManager()
+        self.observability_manager = ObservabilityManager()
         self.description_text = "Generates complete project structures with AI-enhanced templates, intelligent dependency management, CI/CD pipelines, and containerization configs"
         self.version = "1.0.0"
 
@@ -115,6 +136,10 @@ class Scaffolder(BaseModule):
             # Generate testing setup if requested
             if config.testing_enabled:
                 await self._generate_testing_setup(config, project_structure)
+
+            # Generate observability setup if requested
+            if config.observability_enabled:
+                await self._generate_observability_setup(config, project_structure)
 
             # Initialize git if requested
             if config.initialize_git:
@@ -765,3 +790,54 @@ class Scaffolder(BaseModule):
             project_structure["testing"] = {}
 
         project_structure["testing"].update(testing_files)
+
+    async def _generate_observability_setup(
+        self, config: ProjectScaffolderConfig, project_structure: Dict[str, Any]
+    ):
+        """Generate observability setup and configuration"""
+
+        project_path = Path(config.output_directory) / config.project_name
+
+        # Convert string types to enum
+        try:
+            monitoring_type = MonitoringType(config.monitoring_type.lower())
+        except ValueError:
+            monitoring_type = MonitoringType.PROMETHEUS
+
+        try:
+            logging_type = LoggingType(config.logging_type.lower())
+        except ValueError:
+            logging_type = LoggingType.ELK
+
+        try:
+            tracing_type = TracingType(config.tracing_type.lower())
+        except ValueError:
+            tracing_type = TracingType.JAEGER
+
+        # Convert string features to ObservabilityFeature enum
+        observability_features = []
+        for feature in config.observability_features:
+            try:
+                observability_features.append(ObservabilityFeature(feature.lower()))
+            except ValueError:
+                continue  # Skip invalid features
+
+        # Generate observability setup
+        observability_files = (
+            await self.observability_manager.generate_observability_setup(
+                project_path=project_path,
+                language=config.language,
+                framework=config.framework,
+                features=config.features,
+                monitoring_type=monitoring_type,
+                logging_type=logging_type,
+                tracing_type=tracing_type,
+                observability_features=observability_features,
+            )
+        )
+
+        # Add to project structure for tracking
+        if "observability" not in project_structure:
+            project_structure["observability"] = {}
+
+        project_structure["observability"].update(observability_files)
