@@ -1,0 +1,90 @@
+{
+  "name": "Gin Web Framework",
+  "description": "A high-performance HTTP web framework written in Go with middleware support",
+  "language": "go",
+  "framework": "gin",
+  "project_type": "web",
+  "directories": [
+    "cmd",
+    "internal",
+    "internal/handlers",
+    "internal/models",
+    "internal/middleware",
+    "internal/routes",
+    "pkg",
+    "configs",
+    "scripts",
+    "tests"
+  ],
+  "files": {
+    "go.mod": {
+      "content": "module {{project_name}}\n\ngo 1.21\n\nrequire (\n\tgithub.com/gin-gonic/gin v1.9.1\n\tgithub.com/joho/godotenv v1.4.0\n\tgithub.com/sirupsen/logrus v1.9.3\n)\n",
+      "description": "Go module definition with Gin dependencies"
+    },
+    "main.go": {
+      "content": "package main\n\nimport (\n\t\"log\"\n\t\"{{project_name}}/internal/routes\"\n\n\t\"github.com/gin-gonic/gin\"\n\t\"github.com/joho/godotenv\"\n)\n\nfunc main() {\n\t// Load environment variables\n\terr := godotenv.Load()\n\tif err != nil {\n\t\tlog.Println(\"Warning: .env file not found\")\n\t}\n\n\t// Initialize Gin router\n\tr := gin.Default()\n\n\t// Setup routes\n\troutes.SetupRoutes(r)\n\n\t// Start server\n\tlog.Println(\"Server starting on :8080\")\n\tr.Run(\":8080\")\n}\n",
+      "description": "Main Go application entry point with Gin setup"
+    },
+    "cmd/server/main.go": {
+      "content": "package main\n\nimport (\n\t\"log\"\n\t\"{{project_name}}/internal/routes\"\n\n\t\"github.com/gin-gonic/gin\"\n\t\"github.com/joho/godotenv\"\n)\n\nfunc main() {\n\t// Load environment variables\n\terr := godotenv.Load()\n\tif err != nil {\n\t\tlog.Println(\"Warning: .env file not found\")\n\t}\n\n\t// Set Gin mode\n\tgin.SetMode(gin.ReleaseMode)\n\n\t// Initialize Gin router\n\tr := gin.Default()\n\n\t// Setup routes\n\troutes.SetupRoutes(r)\n\n\t// Start server\n\tlog.Println(\"Server starting on :8080\")\n\tr.Run(\":8080\")\n}\n",
+      "description": "Server command with production Gin configuration"
+    },
+    "internal/routes/routes.go": {
+      "content": "package routes\n\nimport (\n\t\"{{project_name}}/internal/handlers\"\n\n\t\"github.com/gin-gonic/gin\"\n)\n\nfunc SetupRoutes(r *gin.Engine) {\n\t// Health check endpoint\n\tr.GET(\"/health\", handlers.HealthCheck)\n\n\t// API v1 routes\n\tv1 := r.Group(\"/api/v1\")\n\t{\n\t\tv1.GET(\"/\", handlers.Welcome)\n\t}\n\n\t// Static files\n\tr.Static(\"/static\", \"./static\")\n}\n",
+      "description": "Route definitions for Gin application"
+    },
+    "internal/handlers/handlers.go": {
+      "content": "package handlers\n\nimport (\n\t\"net/http\"\n\t\"time\"\n\n\t\"github.com/gin-gonic/gin\"\n)\n\n// HealthCheck returns the health status of the application\nfunc HealthCheck(c *gin.Context) {\n\tc.JSON(http.StatusOK, gin.H{\n\t\t\"status\": \"healthy\",\n\t\t\"timestamp\": time.Now().Unix(),\n\t})\n}\n\n// Welcome returns a welcome message\nfunc Welcome(c *gin.Context) {\n\tc.JSON(http.StatusOK, gin.H{\n\t\t\"message\": \"Welcome to {{project_name}} API\",\n\t\t\"framework\": \"Gin\",\n\t\t\"language\": \"Go\",\n\t})\n}\n",
+      "description": "HTTP handlers for Gin routes"
+    },
+    "internal/handlers/health.go": {
+      "content": "package handlers\n\nimport (\n\t\"net/http\"\n\t\"runtime\"\n\t\"time\"\n\n\t\"github.com/gin-gonic/gin\"\n\t\"github.com/sirupsen/logrus\"\n)\n\n// HealthResponse represents the health check response\ntype HealthResponse struct {\n\tStatus    string    `json:\"status\"`\n\tTimestamp int64     `json:\"timestamp\"`\n\tVersion   string    `json:\"version\"`\n\tUptime    int64     `json:\"uptime\"`\n\tGoVersion string    `json:\"go_version\"`\n}\n\n// DetailedHealthCheck provides comprehensive health information\nfunc DetailedHealthCheck(c *gin.Context) {\n\tresponse := HealthResponse{\n\t\tStatus:    \"healthy\",\n\t\tTimestamp: time.Now().Unix(),\n\t\tVersion:   \"1.0.0\",\n\t\tUptime:    0, // Would be calculated from start time\n\t\tGoVersion: runtime.Version(),\n\t}\n\n\tc.JSON(http.StatusOK, response)\n\tlogrus.Info(\"Health check performed\")\n}\n",
+      "description": "Detailed health check handler with system information"
+    },
+    "internal/middleware/cors.go": {
+      "content": "package middleware\n\nimport (\n\t\"github.com/gin-gonic/gin\"\n)\n\n// CORSMiddleware handles CORS headers\nfunc CORSMiddleware() gin.HandlerFunc {\n\treturn func(c *gin.Context) {\n\t\tc.Header(\"Access-Control-Allow-Origin\", \"*\")\n\t\tc.Header(\"Access-Control-Allow-Methods\", \"GET, POST, PUT, DELETE, OPTIONS\")\n\t\tc.Header(\"Access-Control-Allow-Headers\", \"Content-Type, Authorization\")\n\n\t\tif c.Request.Method == \"OPTIONS\" {\n\t\t\tc.AbortWithStatus(204)\n\t\t\treturn\n\t\t}\n\n\t\tc.Next()\n\t}\n}\n",
+      "description": "CORS middleware for Gin"
+    },
+    "internal/middleware/logger.go": {
+      "content": "package middleware\n\nimport (\n\t\"time\"\n\n\t\"github.com/gin-gonic/gin\"\n\t\"github.com/sirupsen/logrus\"\n)\n\n// LoggerMiddleware provides structured logging for requests\nfunc LoggerMiddleware() gin.HandlerFunc {\n\treturn gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {\n\t\tlogrus.WithFields(logrus.Fields{\n\t\t\t\"method\": param.Method,\n\t\t\t\"path\":   param.Path,\n\t\t\t\"status\": param.StatusCode,\n\t\t\t\"latency\": param.Latency,\n\t\t\t\"ip\":     param.ClientIP,\n\t\t}).Info(\"HTTP Request\")\n\n\t\treturn \"\"\n\t})\n}\n\n// RequestTimerMiddleware measures request duration\nfunc RequestTimerMiddleware() gin.HandlerFunc {\n\treturn func(c *gin.Context) {\n\t\tstart := time.Now()\n\t\tc.Next()\n\t\tduration := time.Since(start)\n\n\t\tlogrus.WithFields(logrus.Fields{\n\t\t\t\"method\":   c.Request.Method,\n\t\t\t\"path\":     c.Request.URL.Path,\n\t\t\t\"duration\": duration,\n\t\t\t\"status\":   c.Writer.Status(),\n\t\t}).Info(\"Request completed\")\n\t}\n}\n",
+      "description": "Logging and timing middleware for Gin"
+    },
+    "internal/models/models.go": {
+      "content": "package models\n\nimport \"time\"\n\n// BaseModel provides common fields for all models\ntype BaseModel struct {\n\tID        uint      `json:\"id\" gorm:\"primaryKey\"`\n\tCreatedAt time.Time `json:\"created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\"`\n}\n\n// User represents a user in the system\ntype User struct {\n\tBaseModel\n\tName     string `json:\"name\" gorm:\"not null\"`\n\tEmail    string `json:\"email\" gorm:\"uniqueIndex;not null\"`\n\tPassword string `json:\"-\" gorm:\"not null\"`\n\tActive   bool   `json:\"active\" gorm:\"default:true\"`\n}\n\n// APIResponse represents a standard API response\ntype APIResponse struct {\n\tSuccess bool        `json:\"success\"`\n\tMessage string      `json:\"message,omitempty\"`\n\tData    interface{} `json:\"data,omitempty\"`\n\tErrors  []string    `json:\"errors,omitempty\"`\n}\n",
+      "description": "Data models for the Gin application"
+    },
+    "configs/config.go": {
+      "content": "package configs\n\nimport (\n\t\"os\"\n\t\"strconv\"\n)\n\n// Config holds all configuration for the application\ntype Config struct {\n\tServer   ServerConfig\n\tDatabase DatabaseConfig\n\tJWT      JWTConfig\n}\n\n// ServerConfig holds server-related configuration\ntype ServerConfig struct {\n\tHost string\n\tPort int\n\tMode string\n}\n\n// DatabaseConfig holds database configuration\ntype DatabaseConfig struct {\n\tHost     string\n\tPort     int\n\tUser     string\n\tPassword string\n\tDBName   string\n\tSSLMode  string\n}\n\n// JWTConfig holds JWT configuration\ntype JWTConfig struct {\n\tSecret     string\n\tExpiration int // in hours\n}\n\n// LoadConfig loads configuration from environment variables\nfunc LoadConfig() *Config {\n\treturn &Config{\n\t\tServer: ServerConfig{\n\t\t\tHost: getEnv(\"SERVER_HOST\", \"localhost\"),\n\t\t\tPort: getEnvAsInt(\"SERVER_PORT\", 8080),\n\t\t\tMode: getEnv(\"GIN_MODE\", \"debug\"),\n\t\t},\n\t\tDatabase: DatabaseConfig{\n\t\t\tHost:     getEnv(\"DB_HOST\", \"localhost\"),\n\t\t\tPort:     getEnvAsInt(\"DB_PORT\", 5432),\n\t\t\tUser:     getEnv(\"DB_USER\", \"postgres\"),\n\t\t\tPassword: getEnv(\"DB_PASSWORD\", \"\"),\n\t\t\tDBName:   getEnv(\"DB_NAME\", \"{{project_name}}\");\n\t\t\tSSLMode:  getEnv(\"DB_SSL_MODE\", \"disable\"),\n\t\t},\n\t\tJWT: JWTConfig{\n\t\t\tSecret:     getEnv(\"JWT_SECRET\", \"your-secret-key\"),\n\t\t\tExpiration: getEnvAsInt(\"JWT_EXPIRATION\", 24),\n\t\t},\n\t}\n}\n\nfunc getEnv(key, defaultValue string) string {\n\tif value := os.Getenv(key); value != \"\" {\n\t\treturn value\n\t}\n\treturn defaultValue\n}\n\nfunc getEnvAsInt(key string, defaultValue int) int {\n\tif value := os.Getenv(key); value != \"\" {\n\t\tif intValue, err := strconv.Atoi(value); err == nil {\n\t\t\treturn intValue\n\t\t}\n\t}\n\treturn defaultValue\n}\n",
+      "description": "Configuration management for the Gin application"
+    },
+    ".env": {
+      "content": "# Server Configuration\nSERVER_HOST=localhost\nSERVER_PORT=8080\nGIN_MODE=debug\n\n# Database Configuration\nDB_HOST=localhost\nDB_PORT=5432\nDB_USER=postgres\nDB_PASSWORD=your_password\nDB_NAME={{project_name}}\nDB_SSL_MODE=disable\n\n# JWT Configuration\nJWT_SECRET=your-super-secret-jwt-key-change-this-in-production\nJWT_EXPIRATION=24\n",
+      "description": "Environment variables configuration"
+    },
+    "README.md": {
+      "content": "# {{project_name}}\n\nA web application built with Gin framework in Go.\n\n## Features\n\n- High-performance HTTP router\n- Middleware support\n- JSON rendering\n- Structured logging\n- Environment-based configuration\n- Health checks\n\n## Getting Started\n\n### Prerequisites\n\n- Go 1.21 or higher\n\n### Installation\n\n1. Clone the repository\n2. Install dependencies:\n   ```bash\n   go mod tidy\n   ```\n3. Copy `.env` and update configuration\n4. Run the application:\n   ```bash\n   go run main.go\n   ```\n\n### API Endpoints\n\n- `GET /health` - Health check\n- `GET /api/v1/` - Welcome message\n\n## Project Structure\n\n```\n.\n├── cmd/                 # Application entry points\n├── internal/            # Private application code\n│   ├── handlers/        # HTTP handlers\n│   ├── middleware/      # Gin middleware\n│   ├── models/          # Data models\n│   └── routes/          # Route definitions\n├── pkg/                 # Public packages\n├── configs/             # Configuration files\n├── scripts/             # Build and deployment scripts\n└── tests/               # Test files\n```\n\n## Development\n\n### Running Tests\n\n```bash\ngo test ./...\n```\n\n### Building for Production\n\n```bash\ngo build -o bin/{{project_name}} cmd/server/main.go\n```\n\n## License\n\nThis project is licensed under the MIT License.\n",
+      "description": "Project README with setup and usage instructions"
+    },
+    "Makefile": {
+      "content": "# Makefile for {{project_name}}\n\n.PHONY: build run test clean docker-build docker-run\n\n# Build the application\nbuild:\n\tgo build -o bin/{{project_name}} cmd/server/main.go\n\n# Run the application\nrun:\n\tgo run main.go\n\n# Run tests\ntest:\n\tgo test ./...\n\n# Clean build artifacts\nclean:\n\trm -rf bin/\n\n# Run with live reload\ndev:\n\tgo run github.com/cosmtrek/air@latest\n\n# Format code\ngofmt:\n\tgo fmt ./...\n\n# Lint code\ngolint:\n\tgolint ./...\n\n# Docker commands\ndocker-build:\n\tdocker build -t {{project_name}}:latest .\n\ndocker-run:\n\tdocker run -p 8080:8080 {{project_name}}:latest\n",
+      "description": "Makefile with common development tasks"
+    }
+  },
+  "dependencies": {
+    "package_manager": "go_mod",
+    "dependencies": [
+      "github.com/gin-gonic/gin",
+      "github.com/joho/godotenv",
+      "github.com/sirupsen/logrus"
+    ],
+    "dev_dependencies": ["github.com/cosmtrek/air", "golang.org/x/lint/golint"]
+  },
+  "scripts": {
+    "start": "go run main.go",
+    "build": "go build -o bin/{{project_name}} cmd/server/main.go",
+    "test": "go test ./...",
+    "dev": "go run github.com/cosmtrek/air@latest",
+    "fmt": "go fmt ./...",
+    "lint": "golint ./..."
+  }
+}
