@@ -46,6 +46,15 @@ from .code_quality_manager import (
     QualityFeature,
     CodeQualityConfig,
 )
+from .project_management_manager import (
+    ProjectManagementManager,
+    ValidationType,
+    ProjectHealth,
+    DependencyCheck,
+    ConfigurationValidation,
+    ProjectManagementFeature,
+    ProjectManagementConfig,
+)
 
 
 class ProjectScaffolderConfig(ModuleConfig):
@@ -173,6 +182,38 @@ class ProjectScaffolderConfig(ModuleConfig):
     strict_type_checking: bool = True  # Enable strict type checking
     include_docstring_checking: bool = True  # Include docstring checking
     auto_fix_on_commit: bool = False  # Auto-fix issues on commit
+    project_management_enabled: bool = (
+        True  # Whether to generate project management setup
+    )
+    validation_types: List[str] = [
+        "structure",
+        "dependencies",
+        "configuration",
+    ]  # Types of validation to perform
+    dependency_checks: List[str] = [
+        "vulnerabilities",
+        "outdated",
+        "conflicts",
+    ]  # Dependency checking types
+    config_validations: List[str] = [
+        "syntax",
+        "schema",
+        "environment",
+    ]  # Configuration validation types
+    management_features: List[str] = [
+        "structure_validation",
+        "dependency_audit",
+        "config_validation",
+        "health_monitoring",
+    ]  # Project management features to enable
+    enable_structure_validation: bool = True  # Enable project structure validation
+    enable_dependency_checking: bool = True  # Enable dependency checking
+    enable_config_validation: bool = True  # Enable configuration validation
+    enable_health_monitoring: bool = True  # Enable project health monitoring
+    enable_compliance_checking: bool = False  # Enable compliance checking
+    enable_automated_fixes: bool = False  # Enable automated fixes for issues
+    max_dependency_depth: int = 3  # Maximum dependency resolution depth
+    security_scan_enabled: bool = True  # Enable security scanning
 
 
 class Scaffolder(BaseModule):
@@ -192,6 +233,7 @@ class Scaffolder(BaseModule):
         self.database_manager = DatabaseManager()
         self.api_documentation_manager = APIDocumentationManager()
         self.code_quality_manager = CodeQualityManager()
+        self.project_management_manager = ProjectManagementManager()
         self.description_text = "Generates complete project structures with AI-enhanced templates, intelligent dependency management, CI/CD pipelines, and containerization configs"
         self.version = "1.0.0"
 
@@ -246,6 +288,10 @@ class Scaffolder(BaseModule):
             # Generate code quality setup if requested
             if config.code_quality_enabled:
                 await self._generate_code_quality_setup(config, project_structure)
+
+            # Generate project management setup if requested
+            if config.project_management_enabled:
+                await self._generate_project_management_setup(config, project_structure)
 
             # Initialize git if requested
             if config.initialize_git:
@@ -1137,3 +1183,72 @@ class Scaffolder(BaseModule):
             project_structure["code_quality"] = {}
 
         project_structure["code_quality"].update(quality_files)
+
+    async def _generate_project_management_setup(
+        self, config: ProjectScaffolderConfig, project_structure: Dict[str, Any]
+    ):
+        """Generate project management and validation setup"""
+
+        project_path = Path(config.output_directory) / config.project_name
+
+        # Convert string types to enum
+        validation_types = []
+        for validation in config.validation_types:
+            try:
+                validation_types.append(ValidationType(validation.lower()))
+            except ValueError:
+                continue  # Skip invalid validation types
+
+        dependency_checks = []
+        for check in config.dependency_checks:
+            try:
+                dependency_checks.append(DependencyCheck(check.lower()))
+            except ValueError:
+                continue  # Skip invalid dependency checks
+
+        config_validations = []
+        for validation in config.config_validations:
+            try:
+                config_validations.append(ConfigurationValidation(validation.lower()))
+            except ValueError:
+                continue  # Skip invalid config validations
+
+        management_features = []
+        for feature in config.management_features:
+            try:
+                management_features.append(ProjectManagementFeature(feature.lower()))
+            except ValueError:
+                continue  # Skip invalid management features
+
+        # Create project management config
+        management_config = ProjectManagementConfig(
+            enable_structure_validation=config.enable_structure_validation,
+            enable_dependency_checking=config.enable_dependency_checking,
+            enable_config_validation=config.enable_config_validation,
+            enable_health_monitoring=config.enable_health_monitoring,
+            enable_compliance_checking=config.enable_compliance_checking,
+            enable_automated_fixes=config.enable_automated_fixes,
+            max_dependency_depth=config.max_dependency_depth,
+            security_scan_enabled=config.security_scan_enabled,
+        )
+
+        # Generate project management setup
+        management_files = (
+            await self.project_management_manager.generate_project_management_setup(
+                project_path=project_path,
+                language=config.language,
+                framework=config.framework,
+                features=config.features,
+                validation_types=validation_types,
+                dependency_checks=dependency_checks,
+                config_validations=config_validations,
+                management_features=management_features,
+                management_config=management_config,
+            )
+        )
+
+        # Add to project structure for tracking
+        if "project_management" not in project_structure:
+            project_structure["project_management"] = {}
+
+        project_structure["project_management"].update(management_files)
