@@ -1,0 +1,97 @@
+{
+  "name": "Actix Web Framework",
+  "description": "A powerful, pragmatic, and extremely fast web framework for Rust",
+  "language": "rust",
+  "framework": "actix",
+  "project_type": "web",
+  "directories": [
+    "src",
+    "src/handlers",
+    "src/models",
+    "src/middleware",
+    "src/routes",
+    "src/utils",
+    "tests",
+    "migrations",
+    "config",
+    "scripts",
+    "static"
+  ],
+  "files": {
+    "Cargo.toml": {
+      "content": "[package]\nname = \"{{project_name}}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\nauthors = [\"Your Name <your.email@example.com>\"]\ndescription = \"A web application built with Actix Web\"\n\n[dependencies]\nactix-web = \"4.4\"\nactix-cors = \"0.6\"\nactix-files = \"0.6\"\nserde = { version = \"1.0\", features = [\"derive\"] }\nserde_json = \"1.0\"\nchrono = { version = \"0.4\", features = [\"serde\"] }\ndotenvy = \"0.15\"\nenv_logger = \"0.10\"\nlog = \"0.4\"\n\n[dev-dependencies]\nactix-rt = \"2.9\"\n",
+      "description": "Cargo.toml with Actix Web and related dependencies"
+    },
+    "src/main.rs": {
+      "content": "use actix_web::{middleware::Logger, web, App, HttpServer};\nuse {{project_name}}::routes::init_routes;\n\n#[actix_web::main]\nasync fn main() -> std::io::Result<()> {\n    // Initialize logger\n    env_logger::init_from_env(env_logger::Env::new().default_filter_or(\"info\"));\n\n    // Load environment variables\n    dotenvy::dotenv().ok();\n\n    log::info!(\"Starting {{project_name}} server on 127.0.0.1:8080\");\n\n    HttpServer::new(|| {\n        App::new()\n            .wrap(actix_cors::Cors::permissive())\n            .wrap(Logger::default())\n            .configure(init_routes)\n            .service(actix_files::Files::new(\"/static\", \"static\"))\n    })\n    .bind(\"127.0.0.1:8080\")?\n    .run()\n    .await\n}\n",
+      "description": "Main Rust application entry point with Actix Web setup"
+    },
+    "src/lib.rs": {
+      "content": "pub mod handlers;\npub mod models;\npub mod middleware;\npub mod routes;\npub mod utils;\n",
+      "description": "Library crate root with module declarations"
+    },
+    "src/routes.rs": {
+      "content": "use actix_web::web;\n\nuse crate::handlers::{health, welcome};\n\npub fn init_routes(cfg: &mut web::ServiceConfig) {\n    cfg.service(\n        web::scope(\"/api/v1\")\n            .route(\"\", web::get().to(welcome::welcome))\n            .route(\"/health\", web::get().to(health::detailed_health_check))\n    )\n    .route(\"/health\", web::get().to(health::health_check));\n}\n",
+      "description": "Route configuration for Actix Web application"
+    },
+    "src/handlers/mod.rs": {
+      "content": "pub mod health;\npub mod welcome;\n",
+      "description": "Handlers module declaration"
+    },
+    "src/handlers/health.rs": {
+      "content": "use actix_web::HttpResponse;\nuse serde_json::json;\nuse std::time::{SystemTime, UNIX_EPOCH};\n\n#[derive(serde::Serialize)]\npub struct HealthResponse {\n    pub status: String,\n    pub timestamp: u64,\n}\n\n#[derive(serde::Serialize)]\npub struct DetailedHealthResponse {\n    pub status: String,\n    pub timestamp: u64,\n    pub version: String,\n    pub rust_version: String,\n    pub uptime: u64,\n}\n\npub async fn health_check() -> HttpResponse {\n    let timestamp = SystemTime::now()\n        .duration_since(UNIX_EPOCH)\n        .unwrap()\n        .as_secs();\n\n    HttpResponse::Ok().json(json!({\n        \"status\": \"healthy\",\n        \"timestamp\": timestamp\n    }))\n}\n\npub async fn detailed_health_check() -> HttpResponse {\n    let timestamp = SystemTime::now()\n        .duration_since(UNIX_EPOCH)\n        .unwrap()\n        .as_secs();\n\n    HttpResponse::Ok().json(DetailedHealthResponse {\n        status: \"healthy\".to_string(),\n        timestamp,\n        version: env!(\"CARGO_PKG_VERSION\").to_string(),\n        rust_version: \"1.70.0\".to_string(), // Would be dynamic in real app\n        uptime: 0, // Would be calculated from start time\n    })\n}\n",
+      "description": "Health check handlers for Actix Web"
+    },
+    "src/handlers/welcome.rs": {
+      "content": "use actix_web::HttpResponse;\nuse serde_json::json;\n\npub async fn welcome() -> HttpResponse {\n    HttpResponse::Ok().json(json!({\n        \"message\": \"Welcome to {{project_name}} API\",\n        \"framework\": \"Actix Web\",\n        \"language\": \"Rust\"\n    }))\n}\n",
+      "description": "Welcome handler for Actix Web"
+    },
+    "src/models.rs": {
+      "content": "use chrono::{DateTime, Utc};\nuse serde::{Deserialize, Serialize};\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct BaseModel {\n    pub id: Option<i32>,\n    #[serde(rename = \"created_at\")]\n    pub created_at: Option<DateTime<Utc>>,\n    #[serde(rename = \"updated_at\")]\n    pub updated_at: Option<DateTime<Utc>>,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct User {\n    #[serde(flatten)]\n    pub base: BaseModel,\n    pub name: String,\n    pub email: String,\n    #[serde(skip_serializing)]\n    pub password: String,\n    pub active: bool,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct APIResponse<T> {\n    pub success: bool,\n    pub message: Option<String>,\n    pub data: Option<T>,\n    pub errors: Option<Vec<String>>,\n}\n\n#[derive(Debug, Serialize, Deserialize)]\npub struct ErrorResponse {\n    pub success: bool,\n    pub message: String,\n    pub errors: Option<Vec<String>>,\n    pub code: u16,\n}\n",
+      "description": "Data models for the Actix Web application"
+    },
+    "src/middleware.rs": {
+      "content": "use actix_web::{\n    dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},\n    Error, HttpMessage, HttpResponse,\n};\nuse futures_util::future::LocalBoxFuture;\nuse std::{\n    future::{ready, Ready},\n    time::Instant,\n};\n\npub struct RequestTimer;\n\nimpl<S, B> Transform<S, ServiceRequest> for RequestTimer\nwhere\n    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,\n    S::Future: 'static,\n    B: 'static,\n{\n    type Response = ServiceResponse<B>;\n    type Error = Error;\n    type InitError = ();\n    type Transform = RequestTimerMiddleware<S>;\n    type Future = Ready<Result<Self::Transform, Self::InitError>>;\n\n    fn new_transform(&self, service: S) -> Self::Future {\n        ready(Ok(RequestTimerMiddleware { service }))\n    }\n}\n\npub struct RequestTimerMiddleware<S> {\n    service: S,\n}\n\nimpl<S, B> Service<ServiceRequest> for RequestTimerMiddleware<S>\nwhere\n    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,\n    S::Future: 'static,\n    B: 'static,\n{\n    type Response = ServiceResponse<B>;\n    type Error = Error;\n    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;\n\n    forward_ready!(service);\n\n    fn call(&self, req: ServiceRequest) -> Self::Future {\n        let start = Instant::now();\n        let method = req.method().clone();\n        let uri = req.uri().clone();\n\n        let fut = self.service.call(req);\n\n        Box::pin(async move {\n            let res = fut.await?;\n            let duration = start.elapsed();\n\n            log::info!(\n                \"{} {} {}ms\",\n                method,\n                uri,\n                duration.as_millis()\n            );\n\n            Ok(res)\n        })\n    }\n}\n\npub struct APIVersion;\n\nimpl<S, B> Transform<S, ServiceRequest> for APIVersion\nwhere\n    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,\n    S::Future: 'static,\n    B: 'static,\n{\n    type Response = ServiceResponse<B>;\n    type Error = Error;\n    type InitError = ();\n    type Transform = APIVersionMiddleware<S>;\n    type Future = Ready<Result<Self::Transform, Self::InitError>>;\n\n    fn new_transform(&self, service: S) -> Self::Future {\n        ready(Ok(APIVersionMiddleware { service }))\n    }\n}\n\npub struct APIVersionMiddleware<S> {\n    service: S,\n}\n\nimpl<S, B> Service<ServiceRequest> for APIVersionMiddleware<S>\nwhere\n    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,\n    S::Future: 'static,\n    B: 'static,\n{\n    type Response = ServiceResponse<B>;\n    type Error = Error;\n    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;\n\n    forward_ready!(service);\n\n    fn call(&self, req: ServiceRequest) -> Self::Future {\n        let fut = self.service.call(req);\n\n        Box::pin(async move {\n            let mut res = fut.await?;\n            res.headers_mut().insert(\n                \"x-api-version\",\n                \"1.0.0\".parse().unwrap(),\n            );\n            Ok(res)\n        })\n    }\n}\n",
+      "description": "Middleware for Actix Web application"
+    },
+    "src/utils.rs": {
+      "content": "use std::env;\n\n#[derive(Debug, Clone)]\npub struct Config {\n    pub server: ServerConfig,\n    pub database: DatabaseConfig,\n}\n\n#[derive(Debug, Clone)]\npub struct ServerConfig {\n    pub host: String,\n    pub port: u16,\n}\n\n#[derive(Debug, Clone)]\npub struct DatabaseConfig {\n    pub host: String,\n    pub port: u16,\n    pub user: String,\n    pub password: String,\n    pub database: String,\n}\n\nimpl Config {\n    pub fn from_env() -> Self {\n        Self {\n            server: ServerConfig {\n                host: env::var(\"SERVER_HOST\").unwrap_or_else(|_| \"127.0.0.1\".to_string()),\n                port: env::var(\"SERVER_PORT\")\n                    .unwrap_or_else(|_| \"8080\".to_string())\n                    .parse()\n                    .unwrap_or(8080),\n            },\n            database: DatabaseConfig {\n                host: env::var(\"DATABASE_HOST\").unwrap_or_else(|_| \"localhost\".to_string()),\n                port: env::var(\"DATABASE_PORT\")\n                    .unwrap_or_else(|_| \"5432\".to_string())\n                    .parse()\n                    .unwrap_or(5432),\n                user: env::var(\"DATABASE_USER\").unwrap_or_else(|_| \"postgres\".to_string()),\n                password: env::var(\"DATABASE_PASSWORD\").unwrap_or_default(),\n                database: env::var(\"DATABASE_NAME\").unwrap_or_else(|_| \"{{project_name}}\".to_string()),\n            },\n        }\n    }\n}\n",
+      "description": "Configuration utilities for Actix Web application"
+    },
+    ".env": {
+      "content": "# Server Configuration\nSERVER_HOST=127.0.0.1\nSERVER_PORT=8080\n\n# Database Configuration\nDATABASE_HOST=localhost\nDATABASE_PORT=5432\nDATABASE_USER=postgres\nDATABASE_PASSWORD=your_password\nDATABASE_NAME={{project_name}}\n\n# Logging\nRUST_LOG=actix_web=info\n",
+      "description": "Environment variables configuration"
+    },
+    "README.md": {
+      "content": "# {{project_name}}\n\nA web application built with Actix Web framework in Rust.\n\n## Features\n\n- High-performance actor-based framework\n- Type-safe routing\n- Middleware support\n- Built-in CORS support\n- Environment-based configuration\n- Request timing and logging\n\n## Getting Started\n\n### Prerequisites\n\n- Rust 1.70 or higher\n\n### Installation\n\n1. Clone the repository\n2. Install dependencies:\n   ```bash\n   cargo build\n   ```\n3. Copy `.env` and update configuration\n4. Run the application:\n   ```bash\n   cargo run\n   ```\n\n### API Endpoints\n\n- `GET /health` - Health check\n- `GET /api/v1/` - Welcome message\n- `GET /api/v1/health` - Detailed health check\n\n## Project Structure\n\n```\n.\n├── src/                 # Source code\n│   ├── handlers/        # HTTP handlers\n│   ├── models.rs        # Data models\n│   ├── middleware.rs    # Actix middleware\n│   ├── routes.rs        # Route definitions\n│   └── utils.rs         # Utilities and configuration\n├── tests/               # Integration tests\n├── migrations/          # Database migrations\n├── config/              # Configuration files\n├── scripts/             # Build and deployment scripts\n├── static/              # Static files\n└── Cargo.toml           # Cargo configuration\n```\n\n## Development\n\n### Running Tests\n\n```bash\ncargo test\n```\n\n### Building for Production\n\n```bash\ncargo build --release\n```\n\n### Code Formatting\n\n```bash\ncargo fmt\n```\n\n### Linting\n\n```bash\ncargo clippy\n```\n\n## License\n\nThis project is licensed under the MIT License.\n",
+      "description": "Project README with setup and usage instructions"
+    },
+    "Makefile": {
+      "content": "# Makefile for {{project_name}}\n\n.PHONY: build run test clean docker-build docker-run fmt lint\n\n# Build the application\nbuild:\n\tcargo build\n\n# Run the application\nrun:\n\tcargo run\n\n# Run tests\ntest:\n\tcargo test\n\n# Clean build artifacts\nclean:\n\tcargo clean\n\n# Format code\nfmt:\n\tcargo fmt\n\n# Lint code\nlint:\n\tcargo clippy\n\n# Run with release optimizations\nrelease:\n\tcargo build --release\n\n# Docker commands\ndocker-build:\n\tdocker build -t {{project_name}}:latest .\n\ndocker-run:\n\tdocker run -p 8080:8080 {{project_name}}:latest\n",
+      "description": "Makefile with common development tasks"
+    }
+  },
+  "dependencies": {
+    "package_manager": "cargo",
+    "dependencies": [
+      "actix-web",
+      "actix-cors",
+      "actix-files",
+      "serde",
+      "serde_json",
+      "chrono",
+      "dotenvy",
+      "env_logger",
+      "log"
+    ],
+    "dev_dependencies": ["actix-rt"]
+  },
+  "scripts": {
+    "start": "cargo run",
+    "build": "cargo build",
+    "test": "cargo test",
+    "fmt": "cargo fmt",
+    "lint": "cargo clippy",
+    "release": "cargo build --release"
+  }
+}
