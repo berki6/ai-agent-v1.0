@@ -12,6 +12,7 @@ from .dependency_manager import DependencyManager
 from .ci_cd_manager import CICDPipelineManager
 from .containerization_manager import ContainerizationManager
 from .environment_manager import EnvironmentManager
+from .security_manager import SecurityManager, AuthType, SecurityFeature
 
 
 class ProjectScaffolderConfig(ModuleConfig):
@@ -42,8 +43,19 @@ class ProjectScaffolderConfig(ModuleConfig):
     cloud_providers: List[str] = []  # Cloud providers (aws, gcp, azure)
     kubernetes_replicas: int = 3  # Number of Kubernetes replicas
     environment_management: bool = True  # Whether to generate environment configs
-    config_formats: List[str] = ["env", "json"]  # Configuration formats (env, json, yaml, toml)
+    config_formats: List[str] = [
+        "env",
+        "json",
+    ]  # Configuration formats (env, json, yaml, toml)
     include_secrets: bool = True  # Whether to include secret management
+    security_enabled: bool = True  # Whether to generate security features
+    auth_type: str = "jwt"  # Authentication type (jwt, oauth2, basic, api_key, session)
+    security_features: List[str] = [
+        "authentication",
+        "input_validation",
+        "security_headers",
+        "cors",
+    ]  # Security features to enable
 
 
 class Scaffolder(BaseModule):
@@ -57,6 +69,7 @@ class Scaffolder(BaseModule):
         self.ci_cd_manager = CICDPipelineManager()
         self.containerization_manager = ContainerizationManager()
         self.environment_manager = EnvironmentManager()
+        self.security_manager = SecurityManager()
         self.description_text = "Generates complete project structures with AI-enhanced templates, intelligent dependency management, CI/CD pipelines, and containerization configs"
         self.version = "1.0.0"
 
@@ -87,6 +100,10 @@ class Scaffolder(BaseModule):
             # Generate environment configs if requested
             if config.environment_management:
                 await self._generate_environment_config(config, project_structure)
+
+            # Generate security features if requested
+            if config.security_enabled:
+                await self._generate_security_config(config, project_structure)
 
             # Initialize git if requested
             if config.initialize_git:
@@ -661,3 +678,40 @@ class Scaffolder(BaseModule):
             project_structure["environment"] = {}
 
         project_structure["environment"].update(env_files)
+
+    async def _generate_security_config(
+        self, config: ProjectScaffolderConfig, project_structure: Dict[str, Any]
+    ):
+        """Generate security configuration and code"""
+
+        project_path = Path(config.output_directory) / config.project_name
+
+        # Convert string auth_type to AuthType enum
+        try:
+            auth_type = AuthType(config.auth_type.lower())
+        except ValueError:
+            auth_type = AuthType.JWT  # Default fallback
+
+        # Convert string security features to SecurityFeature enum
+        security_features = []
+        for feature in config.security_features:
+            try:
+                security_features.append(SecurityFeature(feature.lower()))
+            except ValueError:
+                continue  # Skip invalid features
+
+        # Generate security configuration and code
+        security_files = await self.security_manager.generate_security_config(
+            project_path=project_path,
+            language=config.language,
+            framework=config.framework,
+            features=config.features,
+            auth_type=auth_type,
+            security_features=security_features,
+        )
+
+        # Add to project structure for tracking
+        if "security" not in project_structure:
+            project_structure["security"] = {}
+
+        project_structure["security"].update(security_files)
