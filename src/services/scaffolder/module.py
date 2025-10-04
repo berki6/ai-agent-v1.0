@@ -11,6 +11,7 @@ from .template_manager import TemplateManager
 from .dependency_manager import DependencyManager
 from .ci_cd_manager import CICDPipelineManager
 from .containerization_manager import ContainerizationManager
+from .environment_manager import EnvironmentManager
 
 
 class ProjectScaffolderConfig(ModuleConfig):
@@ -40,6 +41,9 @@ class ProjectScaffolderConfig(ModuleConfig):
     containerization: bool = True  # Whether to generate containerization configs
     cloud_providers: List[str] = []  # Cloud providers (aws, gcp, azure)
     kubernetes_replicas: int = 3  # Number of Kubernetes replicas
+    environment_management: bool = True  # Whether to generate environment configs
+    config_formats: List[str] = ["env", "json"]  # Configuration formats (env, json, yaml, toml)
+    include_secrets: bool = True  # Whether to include secret management
 
 
 class Scaffolder(BaseModule):
@@ -52,6 +56,7 @@ class Scaffolder(BaseModule):
         self.dependency_manager = DependencyManager()
         self.ci_cd_manager = CICDPipelineManager()
         self.containerization_manager = ContainerizationManager()
+        self.environment_manager = EnvironmentManager()
         self.description_text = "Generates complete project structures with AI-enhanced templates, intelligent dependency management, CI/CD pipelines, and containerization configs"
         self.version = "1.0.0"
 
@@ -78,6 +83,10 @@ class Scaffolder(BaseModule):
             # Generate containerization configs if requested
             if config.containerization:
                 await self._generate_containerization(config, project_structure)
+
+            # Generate environment configs if requested
+            if config.environment_management:
+                await self._generate_environment_config(config, project_structure)
 
             # Initialize git if requested
             if config.initialize_git:
@@ -629,3 +638,26 @@ class Scaffolder(BaseModule):
                 "description": "Kubernetes service manifest",
             },
         }
+
+    async def _generate_environment_config(
+        self, config: ProjectScaffolderConfig, project_structure: Dict[str, Any]
+    ):
+        """Generate environment configuration files"""
+
+        project_path = Path(config.output_directory) / config.project_name
+
+        # Generate environment configuration files
+        env_files = await self.environment_manager.generate_environment_config(
+            project_path=project_path,
+            language=config.language,
+            framework=config.framework,
+            features=config.features,
+            config_formats=config.config_formats,
+            include_secrets=config.include_secrets,
+        )
+
+        # Add to project structure for tracking
+        if "environment" not in project_structure:
+            project_structure["environment"] = {}
+
+        project_structure["environment"].update(env_files)
