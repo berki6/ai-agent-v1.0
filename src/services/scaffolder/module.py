@@ -37,6 +37,9 @@ class ProjectScaffolderConfig(ModuleConfig):
     deployment_targets: List[str] = (
         []
     )  # Deployment targets (docker, aws, kubernetes, heroku)
+    containerization: bool = True  # Whether to generate containerization configs
+    cloud_providers: List[str] = []  # Cloud providers (aws, gcp, azure)
+    kubernetes_replicas: int = 3  # Number of Kubernetes replicas
 
 
 class Scaffolder(BaseModule):
@@ -48,7 +51,8 @@ class Scaffolder(BaseModule):
         self.template_manager = TemplateManager()
         self.dependency_manager = DependencyManager()
         self.ci_cd_manager = CICDPipelineManager()
-        self.description_text = "Generates complete project structures with AI-enhanced templates, intelligent dependency management, and CI/CD pipelines"
+        self.containerization_manager = ContainerizationManager()
+        self.description_text = "Generates complete project structures with AI-enhanced templates, intelligent dependency management, CI/CD pipelines, and containerization configs"
         self.version = "1.0.0"
 
     def get_description(self) -> str:
@@ -70,6 +74,10 @@ class Scaffolder(BaseModule):
             # Generate CI/CD pipelines if requested
             if config.ci_cd_platforms:
                 await self._generate_ci_cd_pipelines(config, project_structure)
+
+            # Generate containerization configs if requested
+            if config.containerization:
+                await self._generate_containerization(config, project_structure)
 
             # Initialize git if requested
             if config.initialize_git:
@@ -488,3 +496,136 @@ class Scaffolder(BaseModule):
             except Exception as e:
                 # Log error but continue with other platforms
                 print(f"Failed to generate {platform} pipeline: {e}")
+
+    async def _generate_containerization(
+        self, config: ProjectScaffolderConfig, project_structure: Dict[str, Any]
+    ):
+        """Generate containerization configurations (e.g., Dockerfile, Kubernetes manifests)"""
+
+        project_path = Path(config.output_directory) / config.project_name
+
+        if config.create_dockerfile:
+            # Generate Dockerfile using AI
+            dockerfile_content = await self._generate_dockerfile(config)
+
+            # Save Dockerfile
+            dockerfile_path = project_path / "Dockerfile"
+            with open(dockerfile_path, "w", encoding="utf-8") as f:
+                f.write(dockerfile_content)
+
+            # Add to project structure for tracking
+            if "containerization" not in project_structure:
+                project_structure["containerization"] = {}
+
+            project_structure["containerization"]["dockerfile"] = {
+                "path": "Dockerfile",
+                "description": "Dockerfile for containerizing the application",
+            }
+
+        # Generate Kubernetes manifests if required
+        if "kubernetes" in config.deployment_targets:
+            await self._generate_kubernetes_manifests(config, project_structure)
+
+    async def _generate_dockerfile(self, config: ProjectScaffolderConfig) -> str:
+        """Generate a Dockerfile for the project"""
+
+        prompt = f"""
+        Generate a Dockerfile for a {config.language} {config.project_type} project.
+
+        Project Details:
+        - Name: {config.project_name}
+        - Type: {config.project_type}
+        - Language: {config.language}
+        - Framework: {config.framework or 'None specified'}
+        - Features: {', '.join(config.features) if config.features else 'Basic setup'}
+
+        Base the Dockerfile on the following requirements:
+        - Use the official {config.language} image as a base
+        - Set the working directory
+        - Copy the project files into the container
+        - Install dependencies
+        - Specify the command to run the application
+
+        Return the Dockerfile content as a plain text.
+
+        Note: Ensure that the Dockerfile is optimized for production use.
+        """
+
+        try:
+            dockerfile_content = await self.ai_utils.generate_text(
+                prompt, max_tokens=1500
+            )
+            return dockerfile_content.strip()
+        except Exception:
+            return ""
+
+    async def _generate_kubernetes_manifests(
+        self, config: ProjectScaffolderConfig, project_structure: Dict[str, Any]
+    ):
+        """Generate Kubernetes deployment and service manifests"""
+
+        # Deployment manifest
+        deployment_manifest = f"""
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: {config.project_name}-deployment
+          labels:
+            app: {config.project_name}
+        spec:
+          replicas: {config.kubernetes_replicas}
+          selector:
+            matchLabels:
+              app: {config.project_name}
+          template:
+            metadata:
+              labels:
+                app: {config.project_name}
+            spec:
+              containers:
+              - name: {config.project_name}
+                image: {config.project_name.lower()}:latest
+                ports:
+                - containerPort: 80
+        """
+
+        # Service manifest
+        service_manifest = f"""
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {config.project_name}-service
+        spec:
+          type: LoadBalancer
+          ports:
+          - port: 80
+            targetPort: 80
+          selector:
+            app: {config.project_name}
+        """
+
+        # Save manifests to project structure
+        project_path = Path(config.output_directory) / config.project_name
+
+        # Deployment manifest
+        with open(project_path / "k8s-deployment.yaml", "w", encoding="utf-8") as f:
+            f.write(deployment_manifest.strip())
+
+        # Service manifest
+        with open(project_path / "k8s-service.yaml", "w", encoding="utf-8") as f:
+            f.write(service_manifest.strip())
+
+        # Add to project structure for tracking
+        if "containerization" not in project_structure:
+            project_structure["containerization"] = {}
+
+        project_structure["containerization"]["kubernetes_manifests"] = {
+            "deployment": {
+                "path": "k8s-deployment.yaml",
+                "description": "Kubernetes deployment manifest",
+            },
+            "service": {
+                "path": "k8s-service.yaml",
+                "description": "Kubernetes service manifest",
+            },
+        }
